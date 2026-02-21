@@ -1,0 +1,9 @@
+<div class="monitor-page">
+  <!-- Filters/search will go here later -->
+
+  <div class="room-grid">
+    @for (room of rooms(); track room._id) {
+      <app-room-card class="room-card" [room]="room" />
+    }
+  </div>
+</div>

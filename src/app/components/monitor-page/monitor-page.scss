@@ -1,0 +1,19 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.monitor-page {
+  width: 100%;
+  padding: 1.25rem;
+  box-sizing: border-box;
+}
+
+.room-grid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 300px));
+  gap: 1.25rem;
+  align-items: start;
+  justify-content: center;
+}

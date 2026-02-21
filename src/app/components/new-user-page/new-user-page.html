@@ -1,0 +1,120 @@
+<div class="container">
+  <div class="login-card">
+    <h2>Create User</h2>
+
+    <form (ngSubmit)="onSubmit()" #form="ngForm">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Username</mat-label>
+        <input
+          matInput
+          id="username"
+          type="text"
+          name="username"
+          placeholder="Enter username"
+          [(ngModel)]="username"
+          #usernameModel="ngModel"
+          required
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Password</mat-label>
+        <input
+          matInput
+          id="password"
+          [type]="hidePassword ? 'password' : 'text'"
+          name="password"
+          placeholder="Enter password"
+          [(ngModel)]="password"
+          #passwordModel="ngModel"
+          required
+          minlength="8"
+        />
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          (click)="hidePassword = !hidePassword"
+          [attr.aria-label]="'Toggle password visibility'"
+        >
+          <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        <mat-error *ngIf="passwordModel?.hasError('required')">
+          Password is required.
+        </mat-error>
+        <mat-error *ngIf="passwordModel?.hasError('minlength')">
+          Password must be at least 8 characters.
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Verify Password</mat-label>
+        <input
+          matInput
+          id="verifyPassword"
+          [type]="hideVerifyPassword ? 'password' : 'text'"
+          name="verifyPassword"
+          placeholder="Re-enter password"
+          [(ngModel)]="verifyPassword"
+          #verifyPasswordModel="ngModel"
+          required
+        />
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          (click)="hideVerifyPassword = !hideVerifyPassword"
+          [attr.aria-label]="'Toggle verify password visibility'"
+        >
+          <mat-icon>{{ hideVerifyPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        <mat-error *ngIf="verifyPasswordModel?.hasError('required')">
+          Verify Password is required.
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Simple mismatch message -->
+      @if (password && verifyPassword && password !== verifyPassword) {
+        <div
+          style="margin-top: -6px; margin-bottom: 10px; font-size: 13px; color: #a51c30;"
+        >
+          Passwords do not match.
+        </div>
+      }
+
+      <div class="button-row">
+        <button
+          mat-stroked-button
+          type="button"
+          class="cancel-button"
+          routerLink="/login"
+        >
+          Cancel
+        </button>
+
+        <button
+          mat-flat-button
+          color="primary"
+          type="submit"
+          class="submit-button"
+          [disabled]="
+            !form.valid ||
+            !password ||
+            !verifyPassword ||
+            password !== verifyPassword
+          "
+        >
+          Submit
+        </button>
+      </div>
+      <div
+        class="form-error"
+        [class.show]="!!errorMessage()"
+        role="alert"
+        aria-live="polite"
+      >
+        {{ errorMessage() }}
+      </div>
+    </form>
+  </div>
+</div>

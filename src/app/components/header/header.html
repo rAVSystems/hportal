@@ -1,0 +1,24 @@
+
+<div class="container">
+  <mat-toolbar>
+    <span class="logo">H</span>
+    <span class="title">Portal</span>
+
+    <span class="example-spacer"></span>
+
+    <span class="user-logged-in">
+      {{ auth.user()?.username || '' }}
+    </span>
+
+    @if (auth.isLoggedIn()) {
+      <button
+        mat-stroked-button
+        class="logout-btn"
+        type="button"
+        (click)="logout()"
+      >
+        Logout
+      </button>
+    }
+  </mat-toolbar>
+</div>

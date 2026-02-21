@@ -1,0 +1,58 @@
+<div class="container">
+  <div class="login-card">
+    <div class="login-header">
+      <a class="new-user-link" routerLink="/register">New User</a>
+    </div>
+    <h2>Login</h2>
+    <form (ngSubmit)="onSubmit()">
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Username</mat-label>
+      <input
+        matInput
+        id="username"
+        type="text"
+        name="username"
+        [(ngModel)]="username"
+        placeholder="Enter username"
+        required
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Password</mat-label>
+      <input
+        matInput
+        id="password"
+        [type]="hidePassword ? 'password' : 'text'"
+        name="password"
+        [(ngModel)]="password"
+        placeholder="Enter password"
+        required
+      />
+    <button
+        mat-icon-button
+        matSuffix
+        type="button"
+        (click)="hidePassword = !hidePassword"
+        [attr.aria-label]="'Toggle password visibility'"
+        >
+        <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+    </button>
+    </mat-form-field>
+
+    <button
+      mat-flat-button
+      color="primary"
+      type="submit"
+      class="login-button full-width"
+      [disabled]="isLoading()"
+    >
+      {{ isLoading() ? 'Logging in...' : 'Login' }}
+    </button>
+    <div class="form-error" [class.show]="!!errorMessage()">
+      {{ errorMessage() }}
+    </div>
+  </form>
+  </div>
+</div>

@@ -1,0 +1,104 @@
+.container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  width: 100%;
+  margin-top: 10vh;
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  width: 420px;
+  padding: 30px;
+  background-color: rgba(220, 220, 220, 0.4);
+  border-radius: 15px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.login-card h2 {
+  margin: 0 0 20px 0;
+  font-size: 24px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  font-size: 14px;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input:focus {
+  border-color: #3f51b5;
+  box-shadow: 0 0 0 2px rgba(63, 81, 181, 0.15);
+}
+
+.login-button {
+  width: 100%;
+  height: 45px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #3f51b5, #5c6bc0);
+  color: white;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.login-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(63, 81, 181, 0.3);
+}
+
+.login-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(63, 81, 181, 0.25);
+}
+
+.login-card {
+  position: relative;
+}
+
+.login-header {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.new-user-link {
+  font-size: 14px;
+  text-decoration: none;
+  color: #1c70a5;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.new-user-link:hover {
+  text-decoration: underline;
+}
+
+/* Ensure Angular Material form fields span full card width */
+mat-form-field {
+  width: 100%;
+}

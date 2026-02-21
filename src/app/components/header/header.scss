@@ -1,0 +1,46 @@
+.example-spacer {
+  flex: 1 1 auto;
+}
+
+mat-toolbar{
+    background-color: crimson;
+}
+
+.title {
+    color: white;
+    padding-left: 10px;
+}
+
+.logo {
+    font-size: 7vh;
+    font-weight: 500;
+    color: rgb(255, 150, 168);
+}
+
+.user-logged-in{
+        font-weight: 500;
+    color: rgb(255, 150, 168);
+}
+
+
+
+
+
+.logout-btn {
+  margin-left: 10px;
+  height: 32px;
+  line-height: 32px;
+  padding: 0 12px;
+  border-color: white;
+  color: white;
+}
+
+.logout-btn:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.user-logged-in {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
