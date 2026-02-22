@@ -1,6 +1,14 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+
 import { AuthService } from '../../services/auth-service';
 import { RoomCard } from '../room-card/room-card';
 
@@ -19,7 +27,16 @@ export type RoomDoc = {
 @Component({
   selector: 'app-monitor-page',
   standalone: true,
-  imports: [CommonModule, RoomCard],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RoomCard,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatIconModule,
+    MatButtonModule,
+  ],
   templateUrl: './monitor-page.html',
   styleUrls: ['./monitor-page.scss'],
 })
@@ -30,6 +47,69 @@ export class MonitorPage implements OnInit {
   rooms = signal<RoomDoc[]>([]);
   isLoading = signal(false);
   errorMessage = signal<string>('');
+
+  // Search + filters
+  searchText = signal('');
+  campusFilter = signal('');
+  buildingFilter = signal('');
+  roomTypeFilter = signal('');
+
+  private norm(v: unknown): string {
+    return String(v ?? '').trim().toLowerCase();
+  }
+
+  campuses = computed(() => {
+    const set = new Set<string>();
+    for (const r of this.rooms()) {
+      const v = r?.config?.campus;
+      if (v) set.add(String(v));
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  });
+
+  buildings = computed(() => {
+    const set = new Set<string>();
+    for (const r of this.rooms()) {
+      const v = r?.config?.building;
+      if (v) set.add(String(v));
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  });
+
+  roomTypes = computed(() => {
+    const set = new Set<string>();
+    for (const r of this.rooms()) {
+      const v = r?.config?.roomType;
+      if (v) set.add(String(v));
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  });
+
+  filteredRooms = computed(() => {
+    const q = this.norm(this.searchText());
+    const campus = this.norm(this.campusFilter());
+    const building = this.norm(this.buildingFilter());
+    const roomType = this.norm(this.roomTypeFilter());
+
+    return this.rooms().filter((r) => {
+      const cfg = r?.config ?? {};
+
+      const c = this.norm(cfg.campus);
+      const b = this.norm(cfg.building);
+      const room = this.norm(cfg.room);
+      const ip = this.norm((cfg as any).ip);
+      const t = this.norm(cfg.roomType);
+
+      if (campus && c !== campus) return false;
+      if (building && b !== building) return false;
+      if (roomType && t !== roomType) return false;
+
+      if (!q) return true;
+
+      const haystack = `${c} ${b} ${room} ${ip} ${t}`;
+      return haystack.includes(q);
+    });
+  });
 
   constructor(
     private http: HttpClient,

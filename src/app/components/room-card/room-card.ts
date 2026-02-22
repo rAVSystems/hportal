@@ -1,7 +1,9 @@
 import { Component, computed, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
+import { MatBadge } from '@angular/material/badge';
 
 export type RoomDoc = {
   _id: string;
@@ -26,7 +28,7 @@ const DEFAULT_CONFIG = {
 @Component({
   selector: 'app-room-card',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule],
+  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatBadge],
   templateUrl: './room-card.html',
   styleUrl: './room-card.scss',
 })
@@ -40,4 +42,14 @@ export class RoomCard {
       ...(r?.config ?? {}),
     };
   });
+
+  cardTypeClasses() {
+    const type = this.cfg().roomType ?? '';
+
+    return {
+      'type-classroom': type === 'Classroom',
+      'type-conference': type === 'Conference Room',
+      'type-lecture': type === 'Lecture Hall',
+    };
+  }
 }

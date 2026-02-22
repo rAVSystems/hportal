@@ -1,36 +1,40 @@
 <div class="room-card-container">
-  <mat-card class="room-card">
-    <mat-card-header>
-      <mat-card-title>
-        {{ cfg().campus }}
-      </mat-card-title>
-      <mat-card-subtitle>
+  <div class="room-card" [ngClass]="cardTypeClasses()" [routerLink]="['/edit', room()._id]" role="button" tabindex="0">
+
+    <!-- SLA / Service Tag (top-right) -->
+    <div class="sla-tag" [ngClass]="cardTypeClasses()">
+      <div class="sla-tag-label">AVI-SPL</div>
+    </div>
+
+    <!-- Header (Top 1/3 colored band) -->
+    <div class="room-card__header">
+      <div class="room-card__title">
         {{ cfg().building }} · {{ cfg().room }}
-      </mat-card-subtitle>
-    </mat-card-header>
-
-    <mat-card-content>
-      <div class="room-meta">
-        <div class="meta-row">
-          <span class="meta-label">Type:</span>
-          <span class="meta-value">
-            {{ cfg().roomType }}
-          </span>
-        </div>
-
-        <div class="meta-row">
-          <span class="meta-label">Config Version:</span>
-          <span class="meta-value">
-            {{ cfg().version }}
-          </span>
-        </div>
       </div>
-    </mat-card-content>
+      <div class="room-card__subtitle">
+        {{ cfg().campus }} | Cambridge
+      </div>
+    </div>
 
-    <mat-card-actions align="end">
-      <button mat-stroked-button color="primary">
-        Edit
-      </button>
-    </mat-card-actions>
-  </mat-card>
+    <!-- Content (Bottom section) -->
+    <div class="room-card__content">
+      <div class="room-card__subtitle">
+        Status : <span class="status-label">Online</span>
+      </div>
+
+      <div class="room-card__subtitle">
+        System : <span class="status-label">In-Use</span>
+      </div>
+      <div class="room-badge-row">
+        <span class="room-type-badge" [ngClass]="cardTypeClasses()">
+          {{ cfg().roomType }}
+        </span>
+
+        <span class="version-badge">
+          v{{ cfg().version }}
+        </span>
+      </div>
+    </div>
+
+  </div>
 </div>

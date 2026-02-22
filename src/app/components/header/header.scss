@@ -44,3 +44,11 @@ mat-toolbar{
   align-items: center;
   margin-right: 8px;
 }
+
+mat-toolbar {
+  background-color: crimson;
+  height: 74px;        // +10px from default ~64px
+  min-height: 74px;    // ensures it doesn't collapse
+  display: flex;
+  align-items: center; // keeps content vertically centered
+}
