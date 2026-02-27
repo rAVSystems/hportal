@@ -3,7 +3,7 @@
 
     <!-- SLA / Service Tag (top-right) -->
     <div class="sla-tag" [ngClass]="cardTypeClasses()">
-      <div class="sla-tag-label">AVI-SPL</div>
+      <div class="sla-tag-label">{{cfg().sla}}</div>
     </div>
 
     <!-- Header (Top 1/3 colored band) -->
@@ -19,11 +19,11 @@
     <!-- Content (Bottom section) -->
     <div class="room-card__content">
       <div class="room-card__subtitle">
-        Status : <span class="status-label">Online</span>
+        Status : <span class="status-label"></span>
       </div>
 
       <div class="room-card__subtitle">
-        System : <span class="status-label">In-Use</span>
+        System : <span class="status-label"></span>
       </div>
       <div class="room-badge-row">
         <span class="room-type-badge" [ngClass]="cardTypeClasses()">

@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
-import { MatBadge } from '@angular/material/badge';
 
 export type RoomDoc = {
   _id: string;
@@ -13,6 +12,8 @@ export type RoomDoc = {
     room?: string;
     roomType?: string;
     version?: string;
+    sla?: string;
+    slaExpiredAt?: string;
     [key: string]: unknown;
   };
 };
@@ -23,12 +24,14 @@ const DEFAULT_CONFIG = {
   room: '',
   roomType: '',
   version: '',
+  sla: '',
+  slaExpiredAt: '',
 } as const;
 
 @Component({
   selector: 'app-room-card',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatBadge],
+  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule],
   templateUrl: './room-card.html',
   styleUrl: './room-card.scss',
 })
@@ -47,9 +50,10 @@ export class RoomCard {
     const type = this.cfg().roomType ?? '';
 
     return {
-      'type-classroom': type === 'Classroom',
+      'type-classroom': type === 'Classroom' || 'Large Classroom',
       'type-conference': type === 'Conference Room',
       'type-lecture': type === 'Lecture Hall',
+      'type-seminar': type === 'Seminar Room'
     };
   }
 }

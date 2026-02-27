@@ -1,13 +1,15 @@
 <div class="edit-page">
   @if (loading()) {
     <div class="edit-page__loading">
-      <p>Loading room config…</p>
+      <mat-spinner></mat-spinner>
     </div>
   } @else if (loadError()) {
     <div class="edit-page__error">
       <p>{{ loadError() }}</p>
     </div>
   } @else {
+
+
     <form class="edit-form" [formGroup]="form" (ngSubmit)="onSave()">
       <div class="edit-form__header">
         <h2 class="edit-form__title">Edit Room</h2>
@@ -19,196 +21,233 @@
         </div>
       </div>
 
-      <!-- Basic identity + metadata (in config) -->
-      <div class="edit-form__section">
-        <h3 class="edit-form__section-title">Room Details</h3>
+      <mat-accordion class="edit-form__accordion" multi>
 
-        <div class="edit-form__grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Campus</mat-label>
-            <input matInput formControlName="campus" />
-          </mat-form-field>
+        <!-- General Settings -->
+        <mat-expansion-panel [expanded]="true">
+          <mat-expansion-panel-header>
+            <mat-panel-title>General Settings</mat-panel-title>
+            <mat-panel-description>Room metadata + SLA</mat-panel-description>
+          </mat-expansion-panel-header>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Building</mat-label>
-            <input matInput formControlName="building" />
-          </mat-form-field>
+          <div class="edit-form__section">
+            <h3 class="edit-form__section-title">Room Details</h3>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Room</mat-label>
-            <input matInput formControlName="room" />
-          </mat-form-field>
+            <div class="edit-form__grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Campus</mat-label>
+                <input matInput formControlName="campus" />
+              </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>IP</mat-label>
-            <input matInput formControlName="ip" placeholder="192.168.1.101" />
-          </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Building</mat-label>
+                <input matInput formControlName="building" />
+              </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Room Type</mat-label>
-            <mat-select formControlName="roomType">
-              @for (t of roomTypes; track t) {
-                <mat-option [value]="t">{{ t }}</mat-option>
+              <mat-form-field appearance="outline">
+                <mat-label>Room</mat-label>
+                <input matInput formControlName="room" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>IP</mat-label>
+                <input matInput formControlName="ip" placeholder="192.168.1.101" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Room Type</mat-label>
+                <mat-select formControlName="roomType">
+                  @for (t of roomTypes(); track t) {
+                    <mat-option [value]="t">{{ t }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Version</mat-label>
+                <input matInput type="number" step="0.1" formControlName="version" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Updated By</mat-label>
+                <input matInput formControlName="updatedBy" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Updated At</mat-label>
+                <input matInput [matDatepicker]="updatedAtPicker" formControlName="updatedAt" />
+                <mat-datepicker-toggle matSuffix [for]="updatedAtPicker"></mat-datepicker-toggle>
+                <mat-datepicker #updatedAtPicker></mat-datepicker>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>SLA Provider</mat-label>
+                <input matInput formControlName="sla" placeholder="AVI-SPL" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>SLA Expires</mat-label>
+                <input matInput [matDatepicker]="slaExpireAtPicker" formControlName="slaExpireAt" />
+                <mat-datepicker-toggle matSuffix [for]="slaExpireAtPicker"></mat-datepicker-toggle>
+                <mat-datepicker #slaExpireAtPicker></mat-datepicker>
+              </mat-form-field>
+            </div>
+          </div>
+        </mat-expansion-panel>
+
+        <!-- System On Actions -->
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <mat-panel-title>System On Actions</mat-panel-title>
+            <mat-panel-description>Actions executed when the room turns on</mat-panel-description>
+          </mat-expansion-panel-header>
+
+          <div class="edit-form__section" formArrayName="SystemOnActions">
+            <div class="edit-form__section-head">
+              <h3 class="edit-form__section-title">System On Actions</h3>
+              <button mat-stroked-button type="button" (click)="addSystemOnAction()">Add Action</button>
+            </div>
+
+            <div class="actions-list">
+              @for (a of systemOnActionControls; track a; let i = $index) {
+                <div class="action-row" [formGroupName]="i">
+                  <mat-form-field appearance="outline" class="action-row__type">
+                    <mat-label>Action</mat-label>
+                    <mat-select formControlName="action">
+                      @for (opt of actionTypes(); track opt) {
+                        <mat-option [value]="opt">{{ opt }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+
+                  <div class="action-row__params" formGroupName="params">
+                    @for (field of getFieldSpecsFor(systemOnActions, i); track field.key) {
+                      <mat-form-field appearance="outline" class="action-row__param">
+                        <mat-label>{{ field.label }}</mat-label>
+
+                        @if (field.kind === 'select') {
+                          <mat-select [formControlName]="field.key">
+                            @for (opt of getOptionsForField(field); track opt.value) {
+                              <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                            }
+                          </mat-select>
+                        }
+
+                        @if (field.kind === 'text') {
+                          <input matInput [formControlName]="field.key" />
+                        }
+
+                        @if (field.kind === 'number') {
+                          <input matInput type="number" [formControlName]="field.key" />
+                        }
+                      </mat-form-field>
+                    }
+                  </div>
+
+                  <button mat-icon-button type="button" aria-label="Remove action" (click)="removeSystemOnAction(i)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
               }
-            </mat-select>
-          </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Version</mat-label>
-            <input matInput type="number" step="0.1" formControlName="version" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Updated By</mat-label>
-            <input matInput formControlName="updatedBy" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Updated At</mat-label>
-            <input matInput [matDatepicker]="updatedAtPicker" formControlName="updatedAt" />
-            <mat-datepicker-toggle matSuffix [for]="updatedAtPicker"></mat-datepicker-toggle>
-            <mat-datepicker #updatedAtPicker></mat-datepicker>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>SLA Provider</mat-label>
-            <input matInput formControlName="sla" placeholder="AVI-SPL" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>SLA Expires</mat-label>
-            <input matInput [matDatepicker]="slaExpireAtPicker" formControlName="slaExpireAt" />
-            <mat-datepicker-toggle matSuffix [for]="slaExpireAtPicker"></mat-datepicker-toggle>
-            <mat-datepicker #slaExpireAtPicker></mat-datepicker>
-          </mat-form-field>
-        </div>
-      </div>
-
-      <!-- System On Actions -->
-      <div class="edit-form__section" formArrayName="SystemOnActions">
-        <div class="edit-form__section-head">
-          <h3 class="edit-form__section-title">System On Actions</h3>
-          <button mat-stroked-button type="button" (click)="addSystemOnAction()">Add Action</button>
-        </div>
-
-        <div class="actions-list">
-          @for (a of systemOnActions.controls; track a; let i = $index) {
-            <div class="action-row" [formGroupName]="i">
-              <mat-form-field appearance="outline" class="action-row__type">
-                <mat-label>Action</mat-label>
-                <mat-select formControlName="action">
-                  @for (opt of actionTypes; track opt) {
-                    <mat-option [value]="opt">{{ opt }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-
-              <div class="action-row__params" formGroupName="params">
-                @for (field of getFieldSpecsFor(systemOnActions, i); track field.key) {
-                  <mat-form-field appearance="outline" class="action-row__param">
-                    <mat-label>{{ field.label }}</mat-label>
-
-                    @if (field.kind === 'select') {
-                      <mat-select [formControlName]="field.key">
-                        @for (opt of getOptionsForField(field); track opt.value) {
-                          <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
-                        }
-                      </mat-select>
-                    }
-
-                    @if (field.kind === 'text') {
-                      <input matInput [formControlName]="field.key" />
-                    }
-
-                    @if (field.kind === 'number') {
-                      <input matInput type="number" [formControlName]="field.key" />
-                    }
-                  </mat-form-field>
-                }
-              </div>
-
-              <button mat-icon-button type="button" aria-label="Remove action" (click)="removeSystemOnAction(i)">
-                <mat-icon>delete</mat-icon>
-              </button>
+              @if (systemOnActionControls.length === 0) {
+                <p class="edit-form__muted">No actions configured.</p>
+              }
             </div>
-          }
+          </div>
+        </mat-expansion-panel>
 
-          @if (systemOnActions.controls.length === 0) {
-            <p class="edit-form__muted">No actions configured.</p>
-          }
-        </div>
-      </div>
+        <!-- System Off Actions -->
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <mat-panel-title>System Off Actions</mat-panel-title>
+            <mat-panel-description>Actions executed when the room turns off</mat-panel-description>
+          </mat-expansion-panel-header>
 
-      <!-- System Off Actions -->
-      <div class="edit-form__section" formArrayName="SystemOffActions">
-        <div class="edit-form__section-head">
-          <h3 class="edit-form__section-title">System Off Actions</h3>
-          <button mat-stroked-button type="button" (click)="addSystemOffAction()">Add Action</button>
-        </div>
-
-        <div class="actions-list">
-          @for (a of systemOffActions.controls; track a; let i = $index) {
-            <div class="action-row" [formGroupName]="i">
-              <mat-form-field appearance="outline" class="action-row__type">
-                <mat-label>Action</mat-label>
-                <mat-select formControlName="action">
-                  @for (opt of actionTypes; track opt) {
-                    <mat-option [value]="opt">{{ opt }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-
-              <div class="action-row__params" formGroupName="params">
-                @for (field of getFieldSpecsFor(systemOffActions, i); track field.key) {
-                  <mat-form-field appearance="outline" class="action-row__param">
-                    <mat-label>{{ field.label }}</mat-label>
-
-                    @if (field.kind === 'select') {
-                      <mat-select [formControlName]="field.key">
-                        @for (opt of getOptionsForField(field); track opt.value) {
-                          <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
-                        }
-                      </mat-select>
-                    }
-
-                    @if (field.kind === 'text') {
-                      <input matInput [formControlName]="field.key" />
-                    }
-
-                    @if (field.kind === 'number') {
-                      <input matInput type="number" [formControlName]="field.key" />
-                    }
-                  </mat-form-field>
-                }
-              </div>
-
-              <button mat-icon-button type="button" aria-label="Remove action" (click)="removeSystemOffAction(i)">
-                <mat-icon>delete</mat-icon>
-              </button>
+          <div class="edit-form__section" formArrayName="SystemOffActions">
+            <div class="edit-form__section-head">
+              <h3 class="edit-form__section-title">System Off Actions</h3>
+              <button mat-stroked-button type="button" (click)="addSystemOffAction()">Add Action</button>
             </div>
-          }
 
-          @if (systemOffActions.controls.length === 0) {
-            <p class="edit-form__muted">No actions configured.</p>
-          }
-        </div>
-      </div>
+            <div class="actions-list">
+              @for (a of systemOffActionControls; track a; let i = $index) {
+                <div class="action-row" [formGroupName]="i">
+                  <mat-form-field appearance="outline" class="action-row__type">
+                    <mat-label>Action</mat-label>
+                    <mat-select formControlName="action">
+                      @for (opt of actionTypes(); track opt) {
+                        <mat-option [value]="opt">{{ opt }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
 
-      <!-- Placeholder: Other config sections (Components, Gains, Pages, Sources, Devices, etc.)
-           We'll build these out incrementally as nested FormGroups/FormArrays.
-      -->
-      <div class="edit-form__section">
-        <h3 class="edit-form__section-title">Advanced</h3>
-        <p class="edit-form__muted">
-          Next: Components, Gains, Pages, Sources, Devices editors (nested groups + dynamic lists).
-        </p>
-      </div>
+                  <div class="action-row__params" formGroupName="params">
+                    @for (field of getFieldSpecsFor(systemOffActions, i); track field.key) {
+                      <mat-form-field appearance="outline" class="action-row__param">
+                        <mat-label>{{ field.label }}</mat-label>
 
-      <!-- Debug (optional) -->
-      <details class="edit-form__debug">
-        <summary>Debug: form value</summary>
-        <pre>{{ form.value | json }}</pre>
-      </details>
+                        @if (field.kind === 'select') {
+                          <mat-select [formControlName]="field.key">
+                            @for (opt of getOptionsForField(field); track opt.value) {
+                              <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                            }
+                          </mat-select>
+                        }
+
+                        @if (field.kind === 'text') {
+                          <input matInput [formControlName]="field.key" />
+                        }
+
+                        @if (field.kind === 'number') {
+                          <input matInput type="number" [formControlName]="field.key" />
+                        }
+                      </mat-form-field>
+                    }
+                  </div>
+
+                  <button mat-icon-button type="button" aria-label="Remove action" (click)="removeSystemOffAction(i)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              }
+
+              @if (systemOffActionControls.length === 0) {
+                <p class="edit-form__muted">No actions configured.</p>
+              }
+            </div>
+          </div>
+        </mat-expansion-panel>
+
+        <!-- Advanced -->
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <mat-panel-title>Advanced</mat-panel-title>
+            <mat-panel-description>Components, Gains, Pages, Sources, Devices</mat-panel-description>
+          </mat-expansion-panel-header>
+
+          <div class="edit-form__section">
+            <h3 class="edit-form__section-title">Advanced</h3>
+            <p class="edit-form__muted">
+              Next: Components, Gains, Pages, Sources, Devices editors (nested groups + dynamic lists).
+            </p>
+          </div>
+        </mat-expansion-panel>
+
+        <!-- Debug -->
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <mat-panel-title>Debug</mat-panel-title>
+            <mat-panel-description>Inspect current form value</mat-panel-description>
+          </mat-expansion-panel-header>
+
+          <details class="edit-form__debug" open>
+            <summary>Debug: form value</summary>
+            <pre>{{ form.value | json }}</pre>
+          </details>
+        </mat-expansion-panel>
+
+      </mat-accordion>
     </form>
   }
 </div>

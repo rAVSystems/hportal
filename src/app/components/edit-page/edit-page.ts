@@ -18,6 +18,14 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { finalize } from 'rxjs/operators';
+import {
+  MatAccordion,
+  MatExpansionPanel,
+  MatExpansionPanelDescription,
+  MatExpansionPanelHeader,
+  MatExpansionPanelTitle,
+} from '@angular/material/expansion';
+import { MatProgressSpinner } from '@angular/material/progress-spinner';
 
 type RoomConfigDoc = {
   _id: string;
@@ -63,6 +71,12 @@ type FieldSpec = {
     MatIconModule,
     MatDatepickerModule,
     MatNativeDateModule,
+    MatAccordion,
+    MatExpansionPanel,
+    MatExpansionPanelHeader,
+    MatExpansionPanelTitle,
+    MatExpansionPanelDescription,
+    MatProgressSpinner,
   ],
   templateUrl: './edit-page.html',
   styleUrl: './edit-page.scss',
@@ -72,12 +86,19 @@ export class EditPage implements OnInit {
   loading = signal(true);
   loadError = signal<string | null>(null);
   saving = signal(false);
+  readonly panelOpenState = signal(false);
 
   /** Route param */
   roomId: string = '';
 
   /** Dropdowns */
-  roomTypes: string[] = ['Classroom', 'Conference Room', 'Lecture Hall', 'Other'];
+  roomTypes = signal<string[]>([
+    'Classroom',
+    'Large Classroom',
+    'Conference Room',
+    'Lecture Hall',
+    'Seminar room',
+  ]);
 
   // Options used by select fields (populated from loaded config)
   readonly ctx = signal<EditorContext>({
@@ -171,7 +192,9 @@ export class EditPage implements OnInit {
     ],
   };
 
-  actionTypes: ActionType[] = Object.keys(this.actionSpecs) as ActionType[];
+  readonly actionTypes = signal<ActionType[]>(
+    Object.keys(this.actionSpecs) as ActionType[]
+  );
 
   /** Form */
   form!: FormGroup;
@@ -223,6 +246,15 @@ export class EditPage implements OnInit {
 
   get systemOffActions(): FormArray {
     return this.form.get('SystemOffActions') as FormArray;
+  }
+
+  /** Iterable collections for @for in template (FormArray itself is not iterable) */
+  get systemOnActionControls(): FormGroup[] {
+    return (this.systemOnActions?.controls ?? []) as FormGroup[];
+  }
+
+  get systemOffActionControls(): FormGroup[] {
+    return (this.systemOffActions?.controls ?? []) as FormGroup[];
   }
 
   /** API base (keep simple for now; you can move this to environment.ts later) */

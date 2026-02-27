@@ -1,0 +1,571 @@
+{
+  "_id": "11111111-1111-1111-1111-111111111120",
+  "config": {
+    "roomId": "11111111-1111-1111-1111-111111111120",
+    "campus": "FAS",
+    "building": "Sever",
+    "room": "105",
+    "ip": "192.168.1.110",
+    "roomType": "Seminar Room",
+    "version": 1.0,
+    "updatedAt": "2026-02-21T12:00:00Z",
+    "updatedBy": "rpeters",
+    "sla": "CAVT",
+    "slaExpireAt": "2027-02-21T12:00:00Z",
+    "SystemOnActions": [
+        {
+            "action": "TurnOn",
+            "device": "Proj-1"
+        },{
+            "action": "TurnOn",
+            "device": "ConfidenceDisp-1"
+        },{
+            "action": "SetGain",
+            "gain": "ProgGain",
+            "level": 70
+        }
+    ],
+    "SystemOffActions": [
+        {
+            "action": "TurnOff",
+            "device": "Proj-1"
+        },
+        {
+            "action": "RouteVideo",
+            "device": "NV32-1",
+            "input": 0,
+            "output": 1
+        },
+        {
+            "action": "RouteVideo",
+            "device": "NV32-1",
+            "input": 0,
+            "output": 2
+        },                
+        {
+            "action": "HidePage",
+            "page": "UI-1",
+            "layer": "Shutdown Page",
+             "transition": "None"
+        },
+        {
+            "action": "ShowPage",
+            "page": "UI-1",
+            "layer": "Splash Page",
+            "transition": "None"
+        },{
+            "action": "SetGain",
+            "gain": "ProgGain",
+            "level": 0
+        }
+    ],
+    "Components": {
+        "RoomName": {
+            "IsInvisible": false,
+            "Properties": {
+                "String": "Harvard Hall 101"
+            },
+            "Actions": [],
+            "Control": {}
+        },
+        "Page 1 Btn": {
+            "IsInvisible": false,
+            "Properties": {
+            },
+            "Actions": [
+                {
+                    "action": "TogglePage",
+                    "page": "UI-1",
+                    "layer": "Page 1",
+                    "transition": "None"
+                }
+            ],
+            "Control": {}
+        },
+        "Page 2 Btn": {
+            "IsInvisible": false,
+            "Properties": {
+            },
+            "Actions": [
+                {
+                    "action": "TogglePage",
+                    "page": "UI-1",
+                    "layer": "Page 2",
+                    "transition": "None"
+                }
+            ],
+            "Control": {}
+        },
+        "Page 3 Btn": {
+            "IsInvisible": false,
+            "Properties": {
+            },
+            "Actions": [
+                {
+                    "action": "TogglePage",
+                    "page": "UI-1",
+                    "layer": "Page 3",
+                    "transition": "None"
+                }
+            ],
+            "Control": {}
+        },
+        "PowerBtn": {
+            "IsInvisible": false,
+            "Properties": {
+            },
+            "Actions": [
+                {
+                    "action": "TogglePage",
+                    "page": "UI-1",
+                    "layer": "Shutdown Page",
+                    "transition": "None"
+                }
+            ],
+            "Control": {}
+        },
+        "SplashPageBtn": {
+            "IsInvisible": false,
+            "Properties": {
+            },
+            "Actions": [
+                {
+                    "action": "HidePage",
+                    "page": "UI-1",
+                    "layer": "Splash Page",
+                    "transition": "None"
+                },
+                {
+                    "action": "TurnOn",
+                    "device": "System"
+                }
+            ],
+            "Control": {}
+        },
+        "SplashpageLogo": {
+            "IsInvisible": false,
+            "Properties": {
+                "CssClass": "harvardHorizontalShieldLogo"
+            },
+            "Actions": [
+            ],
+            "Control": {}
+        },
+        "ShutdownConfirmBtn": {
+            "IsInvisible": false,
+            "Properties": {
+            },
+            "Actions": [
+                {
+                    "action": "TurnOff",
+                    "device": "System"
+                }
+            ],
+            "Control": {}
+        },
+        "Logo": {
+            "IsInvisible": false,
+            "Properties": {
+                "CssClass": "harvardShieldLogo"
+            },
+            "Actions": [
+            ],
+            "Control": {}
+        },
+        "ShutdownPageMessage": {
+            "IsInvisible": false,
+            "Properties": {
+                "String": "Turn system off?"
+            },
+            "Actions": [
+            ],
+            "Control": {}
+        },
+        "ShutdownCancelBtn": {
+            "IsInvisible": false,
+            "Properties": {
+            },
+            "Actions": [
+                {
+                    "action": "HidePage",
+                    "page": "Touch Screen",
+                    "layer": "Shutdown Page",
+                    "transition": "None"
+                }
+            ],
+            "Control": {}
+        }
+    },
+    "Gains": {
+        "ProgGain": {
+            "Label": "Prog Volume",
+            "IsInvisible": false,
+            "Max": -10,
+            "Min": -50,
+            "SliderStyle" : "",
+            "MuteStyle" : "",
+            "MuteActiveStyle" : "",
+            "MuteLabel" : "Mute",
+            "MuteActiveLabel" : "Muted",
+            "Gain": {},
+            "ControlId": 1
+        },
+        "Lav1Gain": {
+            "Label": "Lav 1",
+            "IsInvisible": false,
+            "Max": -10,
+            "Min": -40,
+            "SliderStyle" : "",
+            "MuteStyle" : "",
+            "MuteActiveStyle" : "",
+            "MuteLabel" : "Mute",
+            "MuteActiveLabel" : "Muted",
+            "Gain": {},
+            "ControlId": 2
+        },
+        "Lav2Gain": {
+            "Label": "Lav 2",
+            "IsInvisible": false,
+            "Max": -10,
+            "Min": -40,
+            "SliderStyle" : "",
+            "MuteStyle" : "",
+            "MuteActiveStyle" : "",
+            "MuteLabel" : "Mute",
+            "MuteActiveLabel" : "Muted",
+            "Gain": {},
+            "ControlId": 3
+        },
+        "HH1Gain": {
+            "Label": "HH 1",
+            "IsInvisible": false,
+            "Max": -10,
+            "Min": -40,
+            "SliderStyle" : "",
+            "MuteStyle" : "",
+            "MuteActiveStyle" : "",
+            "MuteLabel" : "Mute",
+            "MuteActiveLabel" : "Muted",
+            "Gain": {},
+            "ControlId": 4
+        },
+        "HH2Gain": {
+            "Label": "HH 2",
+            "IsInvisible": false,
+            "Max": -10,
+            "Min": -40,
+            "SliderStyle" : "",
+            "MuteStyle" : "",
+            "MuteActiveStyle" : "",
+            "MuteLabel" : "Mute",
+            "MuteActiveLabel" : "Muted",
+            "Gain": {},
+            "ControlId": 5
+        }
+    },
+    "Pages": [
+        {
+            "Id": "ShutdownPage",
+            "Title": "Shutdown Page",
+            "Description": "Page with options to confirm shutdown",
+            "Actions": [
+                {
+                    "action": "StartAutoshutdown",
+                    "seconds": 30
+                }
+            ]
+        },
+        {
+            "Id": "AudioPage",
+            "Description": "Page with options to confirm shutdown",
+            "Title": "Audio Mixer", 
+            "Subtitle": "",
+            "Text": "",
+            "Image": "",
+            "Actions": []
+        },
+        {
+            "Id": "SplashPage",
+            "Description": "Page that shows the Harvard University shield. Selecting anywhere on the screen will turn the system on",
+            "Title": "",
+            "Subtitle": "",
+            "Text": "",
+            "Image": "harvardShieldLogo",
+            "Actions": []
+        },{
+            "Id": "PresentationPage",
+            "Description": "Page that shows video routing and basic audio controls. ",
+            "Title": "",
+            "Subtitle": "",
+            "Text": "",
+            "Image": "",
+            "Actions": []
+        }
+
+    ],
+    "Sources": {
+        "Source_1_Btn": {
+            "Control": "Source_1_Btn",
+            "IsInvisible": false,
+            "Label": "Source 1",
+            "Icon": "computer_off",
+            "IconSelected": "computer_on",
+            "AutoStart": false,
+            "AutoShutdown": false,
+            "Order": 1,
+            "Group": "Sources",
+            "Actions": [
+                {
+                    "action": "TurnOn",
+                    "device": "System"
+                },
+                {
+                    "action": "RouteVideo",
+                    "device": "NV32",
+                    "input": 1,
+                    "output": 1
+                }
+            ]
+        },
+        "Source_2_Btn": {
+            "Control": "Source_2_Btn",
+            "IsInvisible": false,
+            "Label": "Source 2",
+            "Icon": "desktop_windows_off",
+            "IconSelected": "desktop_windows_on",
+            "AutoStart": false,
+            "AutoShutdown": false,
+            "Order": 2,
+            "Group": "Sources",
+            "Actions": [
+                {
+                    "action": "TurnOn",
+                    "device": "System"
+                },
+                {
+                    "action": "RouteVideo",
+                    "device": "NV32",
+                    "input": 2,
+                    "output": 1
+                }
+            ]
+        },
+        "Source_3_Btn": {
+            "Control": "Source_3_Btn",
+            "IsInvisible": false,
+            "Label": "Source 3",
+            "Icon": "headphones_off",
+            "IconSelected": "headphones_on",
+            "AutoStart": false,
+            "AutoShutdown": false,
+            "Order": 3,
+            "Group": "Sources",
+            "Actions": [
+                {
+                    "action": "TurnOn",
+                    "device": "System"
+                },
+                {
+                    "action": "RouteVideo",
+                    "device": "NV32",
+                    "input": 3,
+                    "output": 1
+                }
+            ]
+        },
+        "Source_4_Btn": {
+            "Control": "Source_4_Btn",
+            "IsInvisible": true,
+            "Label": "Source 4",
+            "Icon": "cast_off",
+            "IconSelected": "cast_on",
+            "AutoStart": true,
+            "AutoShutdown": false,
+            "Order": 4,
+            "Group": "Sources",
+            "Actions": [
+                {
+                    "action": "TurnOn",
+                    "device": "System"
+                },
+                {
+                    "action": "RouteVideo",
+                    "device": "NV32",
+                    "input": 4,
+                    "output": 1
+                }
+            ]
+        },
+        "Source_5_Btn": {
+            "Control": "Source_5_Btn",
+            "IsInvisible": true,
+            "Label": "Source 5",
+            "Icon": "cast_off",
+            "IconSelected": "cast_on",
+            "AutoStart": false,
+            "AutoShutdown": false,
+            "Order": 5,
+            "Group": "Sources",
+            "Actions": [
+                {
+                    "action": "TurnOn",
+                    "device": "System"
+                },
+                {
+                    "action": "RouteVideo",
+                    "device": "NV32",
+                    "input": 5,
+                    "output": 1
+                }
+            ]
+        }
+    },
+    "Devices": {
+        "Cynap": {
+            "FriendlyName": "Cynap",
+            "Make": "Wolfvision",
+            "Model": "Cynap Pure Mini",
+            "Interfaces": [
+                "wireless",
+                "network"
+            ],
+            "IpAddress": "192.168.1.123",
+            "Description": "Wireless Presentation Device",
+            "DefaultInput": 3,
+            "Username": "admin",
+            "Password": "abc123",
+            "ControlType": "ip"
+        },
+        "Proj-1": {
+            "FriendlyName": "Projector",
+            "Make": "Sony",
+            "Model": "VPL-85",
+            "Interfaces": [
+                "switcher",
+                "display"
+            ],
+            "IpAddress": "192.168.1.101",
+            "Description": "Primary Projector",
+            "DefaultInput": 3,
+            "Username": "",
+            "Password": "",
+            "ControlType": "ip"
+        },
+        "ConfidenceDisp-1": {
+            "FriendlyName": "Confidence Monitor",
+            "Make": "Samsung",
+            "Model": "85",
+            "Interfaces": [
+                "switcher",
+                "display"
+            ],
+            "IpAddress": "192.168.1.101",
+            "Description": "Rear confidence display",
+            "DefaultInput": 1,
+            "Username": "",
+            "Password": "",
+            "ControlType": "ip"
+        },
+        "NV32-1": {
+            "FriendlyName": "Video Switcher",
+            "Make": "QSYS",
+            "Model": "NV-32-H",
+            "Interfaces": [
+                "switcher",
+                "encoder"
+            ],
+            "IpAddress": "",
+            "Description": "Video Switcher",
+            "DefaultInput": 3,
+            "Username": "",
+            "Password": "",
+            "ControlType": "qsys"
+        },
+        "NvDecoder-1": {
+            "FriendlyName": "Projector Video Decoder",
+            "Make": "QSYS",
+            "Model": "NV-21-HU",
+            "Interfaces": [
+                "switcher",
+                "decoder"
+            ],
+            "IpAddress": "",
+            "Description": "video decoder for projector",
+            "DefaultInput": 1,
+            "Username": "",
+            "Password": "",
+            "ControlType": "qsys"
+        },
+        "NvDecoder-2": {
+            "FriendlyName": "Confidence Video Decoder",
+            "Make": "QSYS",
+            "Model": "NV-21-HU",
+            "Interfaces": [
+                "switcher",
+                "decoder"
+            ],
+            "IpAddress": "",
+            "Description": "video decoder for confidence display",
+            "DefaultInput": 1,
+            "Username": "",
+            "Password": "",
+            "ControlType": "qsys"
+        },
+        "FrontCamera-1": {
+            "FriendlyName": "Audience Camera",
+            "Make": "QSYS",
+            "Model": "NC-Pro15x",
+            "Interfaces": [
+                "camera"
+            ],
+            "IpAddress": "",
+            "Description": "front ptz camera",
+            "DefaultInput": 1,
+            "Username": "",
+            "Password": "",
+            "ControlType": "qsys"
+        },
+        "RearCamera-1": {
+            "FriendlyName": "Rear Left Camera/Lecture Capture",
+            "Make": "QSYS",
+            "Model": "NC-Pro15x",
+            "Interfaces": [
+                "camera"
+            ],
+            "IpAddress": "",
+            "Description": "rear/left ptz camera",
+            "DefaultInput": 1,
+            "Username": "",
+            "Password": "",
+            "ControlType": "qsys"
+        },
+        "RearCamera-2": {
+            "FriendlyName": "Rear Right Camera",
+            "Make": "QSYS",
+            "Model": "NC-Pro15x",
+            "Interfaces": [
+                "camera"
+            ],
+            "IpAddress": "",
+            "Description": "rear/right ptz camera",
+            "DefaultInput": 1,
+            "Username": "",
+            "Password": "",
+            "ControlType": "qsys"
+        },
+        "Recorder-1": {
+            "FriendlyName": "Pearl2",
+            "Make": "Epiphan",
+            "Model": "Pearl2",
+            "Interfaces": [
+                "capture"
+            ],
+            "IpAddress": "",
+            "Description": "lecture capture recorder",
+            "Username": "admin",
+            "Password": "admin",
+            "ControlType": "ip"
+        }     
+    }
+  }
+}
