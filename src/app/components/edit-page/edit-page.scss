@@ -1,11 +1,8 @@
-
-
 :host {
   display: block;
   padding: 24px;
   box-sizing: border-box;
-  min-height: calc(100vh - 74px); // accounts for taller toolbar
-  background: #f7f9fc;
+  min-height: calc(100vh - 74px);
 }
 
 .edit-page {
@@ -34,10 +31,15 @@
 .section-header {
   font-size: 20px;
   font-weight: 600;
-  margin-bottom: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-radius: 16px 16px 0 0;
+}
+
+mat-form-field{
+  margin-right: 20px;
+  font-size: large;
 }
 
 .form-grid {
@@ -70,7 +72,8 @@
 
 .add-action-btn {
   align-self: flex-start;
-  margin-top: 4px;
+
+  margin: 4px;
 }
 
 .footer-actions {

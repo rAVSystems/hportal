@@ -434,7 +434,9 @@
             "DefaultInput": 3,
             "Username": "admin",
             "Password": "abc123",
-            "ControlType": "ip"
+            "ControlType": "ip",
+            "Inputs": [],
+            "Outputs": []
         },
         "Proj-1": {
             "FriendlyName": "Projector",
@@ -449,7 +451,22 @@
             "DefaultInput": 3,
             "Username": "",
             "Password": "",
-            "ControlType": "ip"
+            "ControlType": "ip",
+            "Inputs": [{
+                "Name": "HDMI 1",
+                "Value": "1"
+            },
+            {
+                "Name": "HDMI 2",
+                "Value": "2"
+            },{
+                "Name": "HDBT",
+                "Value": "3"
+            }],
+            "Outputs": [{
+                "Name": "Output 1",
+                "Value": "1"
+            }]
         },
         "ConfidenceDisp-1": {
             "FriendlyName": "Confidence Monitor",
@@ -464,10 +481,25 @@
             "DefaultInput": 1,
             "Username": "",
             "Password": "",
-            "ControlType": "ip"
+            "ControlType": "ip",
+            "Inputs": [{
+                "Name": "HDMI 1",
+                "Value": "1"
+            },
+            {
+                "Name": "HDMI 2",
+                "Value": "2"
+            },{
+                "Name": "HDMI 3",
+                "Value": "3"
+            }],
+            "Outputs": [{
+                "Name": "Output 1",
+                "Value": "1"
+            }]
         },
         "NV32-1": {
-            "FriendlyName": "Video Switcher",
+            "FriendlyName": "Instructor NV32",
             "Make": "QSYS",
             "Model": "NV-32-H",
             "Interfaces": [
@@ -479,7 +511,24 @@
             "DefaultInput": 3,
             "Username": "",
             "Password": "",
-            "ControlType": "qsys"
+            "ControlType": "qsys",
+            "Inputs": [{                
+                "Name": "HDMI 1",
+                "Value": "1"
+            },{                
+                "Name": "HDMI 2",
+                "Value": "2"
+            },{                
+                "Name": "HDMI 3",
+                "Value": "3"
+            }],
+            "Outputs": [{
+                "Name": "HDMI 1",
+                "Value": "1"
+            },{
+                "Name": "HDMI 2",
+                "Value": "1"
+            }]
         },
         "NvDecoder-1": {
             "FriendlyName": "Projector Video Decoder",
@@ -494,7 +543,12 @@
             "DefaultInput": 1,
             "Username": "",
             "Password": "",
-            "ControlType": "qsys"
+            "ControlType": "qsys",
+            "Inputs": [],
+            "Outputs": [{
+                "Name": "HDMI 1",
+                "Value": "1"
+            }]
         },
         "NvDecoder-2": {
             "FriendlyName": "Confidence Video Decoder",
@@ -509,7 +563,12 @@
             "DefaultInput": 1,
             "Username": "",
             "Password": "",
-            "ControlType": "qsys"
+            "ControlType": "qsys",
+            "Inputs": [],
+            "Outputs": [{
+                "Name": "HDMI 1",
+                "Value": "1"
+            }]
         },
         "FrontCamera-1": {
             "FriendlyName": "Audience Camera",

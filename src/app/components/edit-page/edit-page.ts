@@ -44,7 +44,7 @@ type ActionType =
 type Option = { value: string; label: string };
 
 type EditorContext = {
-  deviceIds: string[];
+  allDevices: { id: string; friendlyName?: string; interfaces: string[] }[];
   pageIds: string[];
   layerIds: string[];
   transitions: string[];
@@ -75,7 +75,6 @@ type FieldSpec = {
     MatExpansionPanel,
     MatExpansionPanelHeader,
     MatExpansionPanelTitle,
-    MatExpansionPanelDescription,
     MatProgressSpinner,
   ],
   templateUrl: './edit-page.html',
@@ -98,11 +97,12 @@ export class EditPage implements OnInit {
     'Conference Room',
     'Lecture Hall',
     'Seminar room',
+    'All-In-One Conference Room'
   ]);
 
   // Options used by select fields (populated from loaded config)
   readonly ctx = signal<EditorContext>({
-    deviceIds: [],
+    allDevices: [],
     pageIds: [],
     layerIds: [],
     transitions: ['None'],
@@ -116,7 +116,14 @@ export class EditPage implements OnInit {
         label: 'Device',
         kind: 'select',
         required: true,
-        options: (c) => c.deviceIds.map((d) => ({ value: d, label: d })),
+        options: (c) =>
+          c.allDevices
+            .filter((d) =>
+              d.interfaces.some((i) =>
+                ['display', 'projector'].includes(i.toLowerCase())
+              )
+            )
+            .map((d) => ({ value: d.id, label: d.friendlyName ?? d.id })),
       },
     ],
     TurnOff: [
@@ -125,7 +132,14 @@ export class EditPage implements OnInit {
         label: 'Device',
         kind: 'select',
         required: true,
-        options: (c) => c.deviceIds.map((d) => ({ value: d, label: d })),
+        options: (c) =>
+          c.allDevices
+            .filter((d) =>
+              d.interfaces.some((i) =>
+                ['display', 'projector'].includes(i.toLowerCase())
+              )
+            )
+            .map((d) => ({ value: d.id, label: d.friendlyName ?? d.id })),
       },
     ],
     RouteVideo: [
@@ -134,7 +148,14 @@ export class EditPage implements OnInit {
         label: 'Device',
         kind: 'select',
         required: true,
-        options: (c) => c.deviceIds.map((d) => ({ value: d, label: d })),
+        options: (c) =>
+          c.allDevices
+            .filter((d) =>
+              d.interfaces.some((i) =>
+                i.toLowerCase().includes('switcher')
+              )
+            )
+            .map((d) => ({ value: d.id, label: d.friendlyName ?? d.id })),
       },
       { key: 'input', label: 'Input', kind: 'text', required: true },
       { key: 'output', label: 'Output', kind: 'text', required: true },
@@ -210,7 +231,7 @@ export class EditPage implements OnInit {
       building: ['', Validators.required],
       room: ['', Validators.required],
       ip: ['', Validators.required],
-      roomType: ['Other'],
+      roomType: [''],
       version: [1],
       updatedBy: [''],
 
@@ -312,14 +333,22 @@ export class EditPage implements OnInit {
     });
 
     // Populate select options from config
-    const deviceIds = Object.keys(cfg?.Devices ?? {});
+    const allDevices = Object.entries(cfg?.Devices ?? {}).map(
+      ([id, device]: any) => ({
+        id,
+        friendlyName: device?.FriendlyName ?? id,
+        interfaces: Array.isArray(device?.Interfaces)
+          ? device.Interfaces
+          : [],
+      })
+    );
     const pageIds = Array.isArray(cfg?.Pages)
       ? cfg.Pages.map((p: any) => p?.Id).filter(Boolean)
       : [];
     const transitions = ['None', 'Fade', 'Slide'];
 
     this.ctx.set({
-      deviceIds,
+      allDevices,
       pageIds,
       layerIds: [],
       transitions,

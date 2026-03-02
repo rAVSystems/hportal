@@ -4,27 +4,35 @@
 }
 
 .monitor-page {
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  padding: 1.25rem;
-  box-sizing: border-box;
+  //box-sizing: border-box;
+  align-items:center;
 }
 
 /* --- Search + filters toolbar --- */
 .toolbar {
   display: flex;
   flex-direction: row;
+  width: 100%;
   justify-content: center;
   align-items: center;
-  flex-wrap: wrap;
   gap: 1rem;
-  margin-top: 3rem;
-  margin-bottom: 1.25rem;
+  //margin-top: 1rem;
+  //margin-bottom: 1rem;
+  //border-radius: 25px;
+  background-color: rgba(238, 238, 238, 0.806);
+
+  /* give flex a real vertical reference */
+  padding-top: 1rem;
+  min-height: 80px;
 }
+
 
 .search-wrap {
   display: flex;
-  justify-content: center;
-  flex: 0 1 500px;
+  flex: 0 1 400px;
 }
 
 .search {
@@ -53,8 +61,10 @@
   gap: 1.25rem;
   align-items: start;
   justify-content: center;
-
-  /* ensures there is a gap around the outer edges too */
   padding: 1.25rem;
   box-sizing: border-box;
+}
+
+.toolbar mat-form-field {
+  margin: 0;
 }

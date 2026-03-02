@@ -9,7 +9,6 @@
     </div>
   } @else {
 
-
     <form class="edit-form" [formGroup]="form" (ngSubmit)="onSave()">
       <div class="edit-form__header">
         <h2 class="edit-form__title">Edit Room</h2>
@@ -27,70 +26,80 @@
         <mat-expansion-panel [expanded]="true">
           <mat-expansion-panel-header>
             <mat-panel-title>General Settings</mat-panel-title>
-            <mat-panel-description>Room metadata + SLA</mat-panel-description>
           </mat-expansion-panel-header>
 
           <div class="edit-form__section">
             <h3 class="edit-form__section-title">Room Details</h3>
 
             <div class="edit-form__grid">
-              <mat-form-field appearance="outline">
-                <mat-label>Campus</mat-label>
-                <input matInput formControlName="campus" />
-              </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Building</mat-label>
-                <input matInput formControlName="building" />
-              </mat-form-field>
+              <!-- Row 1 -->
+              <div class="edit-form__row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Campus</mat-label>
+                  <input matInput formControlName="campus" />
+                </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Room</mat-label>
-                <input matInput formControlName="room" />
-              </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Building</mat-label>
+                  <input matInput formControlName="building" />
+                </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>IP</mat-label>
-                <input matInput formControlName="ip" placeholder="192.168.1.101" />
-              </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Room</mat-label>
+                  <input matInput formControlName="room" />
+                </mat-form-field>
+              </div>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Room Type</mat-label>
-                <mat-select formControlName="roomType">
-                  @for (t of roomTypes(); track t) {
-                    <mat-option [value]="t">{{ t }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+              <!-- Row 2 -->
+              <div class="edit-form__row">
+                <mat-form-field appearance="outline">
+                  <mat-label>IP</mat-label>
+                  <input matInput formControlName="ip" placeholder="192.168.1.101" />
+                </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Version</mat-label>
-                <input matInput type="number" step="0.1" formControlName="version" />
-              </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Room Type</mat-label>
+                  <mat-select formControlName="roomType">
+                    @for (t of roomTypes(); track t) {
+                      <mat-option [value]="t">{{ t }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Updated By</mat-label>
-                <input matInput formControlName="updatedBy" />
-              </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Version</mat-label>
+                  <input matInput type="number" step="0.1" formControlName="version" />
+                </mat-form-field>
+              </div>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Updated At</mat-label>
-                <input matInput [matDatepicker]="updatedAtPicker" formControlName="updatedAt" />
-                <mat-datepicker-toggle matSuffix [for]="updatedAtPicker"></mat-datepicker-toggle>
-                <mat-datepicker #updatedAtPicker></mat-datepicker>
-              </mat-form-field>
+              <!-- Row 3 -->
+              <div class="edit-form__row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Updated By</mat-label>
+                  <input matInput formControlName="updatedBy" />
+                </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>SLA Provider</mat-label>
-                <input matInput formControlName="sla" placeholder="AVI-SPL" />
-              </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Updated At</mat-label>
+                  <input matInput [matDatepicker]="updatedAtPicker" formControlName="updatedAt" />
+                  <mat-datepicker-toggle matSuffix [for]="updatedAtPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #updatedAtPicker></mat-datepicker>
+                </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>SLA Expires</mat-label>
-                <input matInput [matDatepicker]="slaExpireAtPicker" formControlName="slaExpireAt" />
-                <mat-datepicker-toggle matSuffix [for]="slaExpireAtPicker"></mat-datepicker-toggle>
-                <mat-datepicker #slaExpireAtPicker></mat-datepicker>
-              </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>SLA Provider</mat-label>
+                  <input matInput formControlName="sla" placeholder="AVI-SPL" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>SLA Expires</mat-label>
+                  <input matInput [matDatepicker]="slaExpireAtPicker" formControlName="slaExpireAt" />
+                  <mat-datepicker-toggle matSuffix [for]="slaExpireAtPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #slaExpireAtPicker></mat-datepicker>
+                </mat-form-field>
+              </div>
+
             </div>
           </div>
         </mat-expansion-panel>
@@ -99,13 +108,11 @@
         <mat-expansion-panel>
           <mat-expansion-panel-header>
             <mat-panel-title>System On Actions</mat-panel-title>
-            <mat-panel-description>Actions executed when the room turns on</mat-panel-description>
           </mat-expansion-panel-header>
 
           <div class="edit-form__section" formArrayName="SystemOnActions">
             <div class="edit-form__section-head">
               <h3 class="edit-form__section-title">System On Actions</h3>
-              <button mat-stroked-button type="button" (click)="addSystemOnAction()">Add Action</button>
             </div>
 
             <div class="actions-list">
@@ -154,6 +161,10 @@
                 <p class="edit-form__muted">No actions configured.</p>
               }
             </div>
+
+            <div class="edit-form__section-head">
+              <button mat-stroked-button type="button" (click)="addSystemOnAction()">Add Action</button>
+            </div>
           </div>
         </mat-expansion-panel>
 
@@ -161,7 +172,6 @@
         <mat-expansion-panel>
           <mat-expansion-panel-header>
             <mat-panel-title>System Off Actions</mat-panel-title>
-            <mat-panel-description>Actions executed when the room turns off</mat-panel-description>
           </mat-expansion-panel-header>
 
           <div class="edit-form__section" formArrayName="SystemOffActions">
@@ -223,7 +233,6 @@
         <mat-expansion-panel>
           <mat-expansion-panel-header>
             <mat-panel-title>Advanced</mat-panel-title>
-            <mat-panel-description>Components, Gains, Pages, Sources, Devices</mat-panel-description>
           </mat-expansion-panel-header>
 
           <div class="edit-form__section">
@@ -238,7 +247,6 @@
         <mat-expansion-panel>
           <mat-expansion-panel-header>
             <mat-panel-title>Debug</mat-panel-title>
-            <mat-panel-description>Inspect current form value</mat-panel-description>
           </mat-expansion-panel-header>
 
           <details class="edit-form__debug" open>
