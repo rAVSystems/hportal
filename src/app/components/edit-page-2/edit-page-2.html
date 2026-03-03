@@ -1,0 +1,105 @@
+<div class="edit-page">
+    <div class="side-nav-bar">
+        <h3>Navigation</h3>
+    </div>
+    <div class="form">
+        @if (loading()) {
+            <div class="edit-page__loading">
+
+            </div>
+        } 
+        @else if (loadError()) {
+            <div class="edit-page__error">
+            <p>{{ loadError() }}</p>
+            </div>
+        } 
+        @else {
+            <form class="edit-form" [formGroup]="form" (ngSubmit)="onSave()">
+                <div class="edit-form-header">
+                    <h2 class="edit-form-title">{{ form.get('building')?.value }} {{form.get('room')?.value }}</h2>
+                    <div class="edit-form-actions">
+                        <button mat-stroked-button type="button" (click)="onCancel()">Cancel</button>
+                        <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">
+                            @if (saving()) { Saving… } @else { Save }
+                        </button>
+                    </div>
+                </div>
+                <div class="edit-form__section">
+
+            <div class="form-general-settings">
+                <h2 class="section-title">General Settings</h2>
+              <!-- Row 1 -->
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Campus</mat-label>
+                  <input matInput formControlName="campus" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Building</mat-label>
+                  <input matInput formControlName="building" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Room</mat-label>
+                  <input matInput formControlName="room" />
+                </mat-form-field>
+              </div>
+
+              <!-- Row 2 -->
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>IP</mat-label>
+                  <input matInput formControlName="ip" placeholder="192.168.1.101" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Room Type</mat-label>
+                  <mat-select formControlName="roomType">
+                    @for (t of roomTypes(); track t) {
+                      <mat-option [value]="t">{{ t }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Version</mat-label>
+                  <input matInput type="number" step="0.1" formControlName="version" />
+                </mat-form-field>
+              </div>
+
+              <!-- Row 3 -->
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Updated By</mat-label>
+                  <input matInput formControlName="updatedBy" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Updated At</mat-label>
+                  <input matInput [matDatepicker]="updatedAtPicker" formControlName="updatedAt" />
+                  <mat-datepicker-toggle matSuffix [for]="updatedAtPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #updatedAtPicker></mat-datepicker>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>SLA Provider</mat-label>
+                  <input matInput formControlName="sla" placeholder="AVI-SPL" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>SLA Expires</mat-label>
+                  <input matInput [matDatepicker]="slaExpireAtPicker" formControlName="slaExpireAt" />
+                  <mat-datepicker-toggle matSuffix [for]="slaExpireAtPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #slaExpireAtPicker></mat-datepicker>
+                </mat-form-field>
+              </div>
+            </div>
+          </div>
+            </form>
+        }
+    </div>
+    <div class="side-nav-bar">
+        
+    </div>
+</div>

@@ -29,7 +29,6 @@
           </mat-expansion-panel-header>
 
           <div class="edit-form__section">
-            <h3 class="edit-form__section-title">Room Details</h3>
 
             <div class="edit-form__grid">
 
@@ -111,12 +110,8 @@
           </mat-expansion-panel-header>
 
           <div class="edit-form__section" formArrayName="SystemOnActions">
-            <div class="edit-form__section-head">
-              <h3 class="edit-form__section-title">System On Actions</h3>
-            </div>
-
             <div class="actions-list">
-              @for (a of systemOnActionControls; track a; let i = $index) {
+              @for (a of systemOnActionControls; track i; let i = $index) {
                 <div class="action-row" [formGroupName]="i">
                   <mat-form-field appearance="outline" class="action-row__type">
                     <mat-label>Action</mat-label>
@@ -134,7 +129,7 @@
 
                         @if (field.kind === 'select') {
                           <mat-select [formControlName]="field.key">
-                            @for (opt of getOptionsForField(field); track opt.value) {
+                            @for (opt of getOptionsForField(field, a.get('params')); track opt.value) {
                               <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
                             }
                           </mat-select>
@@ -177,11 +172,10 @@
           <div class="edit-form__section" formArrayName="SystemOffActions">
             <div class="edit-form__section-head">
               <h3 class="edit-form__section-title">System Off Actions</h3>
-              <button mat-stroked-button type="button" (click)="addSystemOffAction()">Add Action</button>
             </div>
 
             <div class="actions-list">
-              @for (a of systemOffActionControls; track a; let i = $index) {
+              @for (a of systemOffActionControls; track i; let i = $index) {
                 <div class="action-row" [formGroupName]="i">
                   <mat-form-field appearance="outline" class="action-row__type">
                     <mat-label>Action</mat-label>
@@ -199,7 +193,7 @@
 
                         @if (field.kind === 'select') {
                           <mat-select [formControlName]="field.key">
-                            @for (opt of getOptionsForField(field); track opt.value) {
+                            @for (opt of getOptionsForField(field, a.get('params')); track opt.value) {
                               <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
                             }
                           </mat-select>
@@ -226,6 +220,138 @@
                 <p class="edit-form__muted">No actions configured.</p>
               }
             </div>
+            <div class="edit-form__section-head">
+              <button mat-stroked-button type="button" (click)="addSystemOffAction()">Add Action</button>
+            </div>
+
+          </div>
+        </mat-expansion-panel>
+
+        <!-- Sources -->
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <mat-panel-title>Sources</mat-panel-title>
+          </mat-expansion-panel-header>
+
+          <div class="edit-form__section" formArrayName="Sources">
+
+            <div class="actions-list">
+              @for (s of sourceControls; track i; let i = $index) {
+                <div class="action-row" [formGroupName]="i">
+
+                  <div class="source-grid">
+
+                    <!-- LEFT: string + number fields -->
+                    <div class="source-left">
+
+                      @for (field of getSourceFieldSpecs(i); track field.key) {
+                        @if (field.kind === 'text' || field.kind === 'number') {
+                          <mat-form-field appearance="outline">
+                            <mat-label>{{ field.label }}</mat-label>
+                            <input
+                              matInput
+                              [type]="field.kind === 'number' ? 'number' : 'text'"
+                              [formControlName]="field.key"
+                            />
+                          </mat-form-field>
+                        }
+                      }
+
+                    </div>
+
+                    <!-- RIGHT: boolean fields -->
+                    <div class="source-right">
+                      @for (field of getSourceFieldSpecs(i); track field.key) {
+                        @if (field.kind === 'boolean') {
+                          <mat-checkbox [formControlName]="field.key">
+                            {{ field.label }}
+                          </mat-checkbox>
+                        }
+                      }
+                    </div>
+
+                    <!-- Actions full width below -->
+                    <div class="source-actions" formArrayName="Actions">
+                      <div class="edit-form__section-head">
+                        <h4 class="edit-form__section-title">Actions</h4>
+                      </div>
+
+                      <div class="actions-list">
+                        @for (a of getSourceActionControls(i); track j; let j = $index) {
+                          <div class="action-row" [formGroupName]="j">
+
+                            <mat-form-field appearance="outline" class="action-row__type">
+                              <mat-label>Action</mat-label>
+                              <mat-select formControlName="action">
+                                @for (opt of actionTypes(); track opt) {
+                                  <mat-option [value]="opt">{{ opt }}</mat-option>
+                                }
+                              </mat-select>
+                            </mat-form-field>
+
+                            <div class="action-row__params" formGroupName="params">
+                              @for (field of getSourceActionFieldSpecs(i, j); track field.key) {
+                                <mat-form-field appearance="outline" class="action-row__param">
+                                  <mat-label>{{ field.label }}</mat-label>
+
+                                  @if (field.kind === 'select') {
+                                    <mat-select [formControlName]="field.key">
+                                      @for (opt of getOptionsForField(field, a.get('params')); track opt.value) {
+                                        <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                                      }
+                                    </mat-select>
+                                  }
+
+                                  @if (field.kind === 'text') {
+                                    <input matInput [formControlName]="field.key" />
+                                  }
+
+                                  @if (field.kind === 'number') {
+                                    <input matInput type="number" [formControlName]="field.key" />
+                                  }
+                                </mat-form-field>
+                              }
+                            </div>
+
+                            <button mat-icon-button type="button" (click)="removeSourceAction(i, j)">
+                              <mat-icon>delete</mat-icon>
+                            </button>
+                          </div>
+                        }
+
+                        @if (getSourceActionControls(i).length === 0) {
+                          <p class="edit-form__muted">No actions configured.</p>
+                        }
+                      </div>
+
+                      <div class="edit-form__section-head">
+                        <button mat-stroked-button type="button" (click)="addSourceAction(i)">
+                          Add Action
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <div style="display:flex; justify-content:flex-end; width:100%; margin-top:8px;">
+                    <button mat-icon-button type="button" (click)="removeSource(i)">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+
+                </div>
+              }
+
+              @if (sourceControls.length === 0) {
+                <p class="edit-form__muted">No sources configured.</p>
+              }
+            </div>
+
+            <div class="edit-form__section-head">
+              <button mat-stroked-button type="button" (click)="addSource()">
+                Add Source
+              </button>
+            </div>
           </div>
         </mat-expansion-panel>
 
@@ -246,13 +372,9 @@
         <!-- Debug -->
         <mat-expansion-panel>
           <mat-expansion-panel-header>
-            <mat-panel-title>Debug</mat-panel-title>
+            <mat-panel-title>RAW JSON</mat-panel-title>
           </mat-expansion-panel-header>
-
-          <details class="edit-form__debug" open>
-            <summary>Debug: form value</summary>
-            <pre>{{ form.value | json }}</pre>
-          </details>
+          <pre>{{ form.value | json }}</pre>
         </mat-expansion-panel>
 
       </mat-accordion>

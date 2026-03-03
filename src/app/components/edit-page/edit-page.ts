@@ -26,6 +26,7 @@ import {
   MatExpansionPanelTitle,
 } from '@angular/material/expansion';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 type RoomConfigDoc = {
   _id: string;
@@ -44,7 +45,13 @@ type ActionType =
 type Option = { value: string; label: string };
 
 type EditorContext = {
-  allDevices: { id: string; friendlyName?: string; interfaces: string[] }[];
+  allDevices: {
+    id: string;
+    friendlyName?: string;
+    interfaces: string[];
+    inputs?: { Name: string; Value: string }[];
+    outputs?: { Name: string; Value: string }[];
+  }[];
   pageIds: string[];
   layerIds: string[];
   transitions: string[];
@@ -55,7 +62,7 @@ type FieldSpec = {
   label: string;
   kind: 'text' | 'number' | 'select';
   required?: boolean;
-  options?: (ctx: EditorContext) => Option[];
+  options?: (ctx: EditorContext, group?: FormGroup) => Option[];
 };
 
 @Component({
@@ -76,6 +83,7 @@ type FieldSpec = {
     MatExpansionPanelHeader,
     MatExpansionPanelTitle,
     MatProgressSpinner,
+    MatCheckboxModule,
   ],
   templateUrl: './edit-page.html',
   styleUrl: './edit-page.scss',
@@ -152,13 +160,84 @@ export class EditPage implements OnInit {
           c.allDevices
             .filter((d) =>
               d.interfaces.some((i) =>
-                i.toLowerCase().includes('switcher')
+                i.toLowerCase().includes('switcher') ||
+                i.toLowerCase().includes('encoder') ||
+                i.toLowerCase().includes('decoder')
               )
             )
             .map((d) => ({ value: d.id, label: d.friendlyName ?? d.id })),
       },
-      { key: 'input', label: 'Input', kind: 'text', required: true },
-      { key: 'output', label: 'Output', kind: 'text', required: true },
+      {
+        key: 'input',
+        label: 'Input',
+        kind: 'select',
+        required: true,
+        options: (ctx, group) => {
+          const deviceId = group?.get('device')?.value;
+          if (!deviceId) return [];
+
+          const selected = ctx.allDevices.find((d) => d.id === deviceId);
+          if (!selected) return [];
+
+          const interfaces = (selected.interfaces ?? []).map((i) => i.toLowerCase());
+          const isDecoder = interfaces.some((i) => i.includes('decoder'));
+
+          const options: Option[] = [];
+
+          // 1) Always include the device's own inputs (if any)
+          if (Array.isArray(selected.inputs) && selected.inputs.length) {
+            selected.inputs.forEach((inp) => {
+              options.push({
+                value: inp.Value,
+                label: inp.Name,
+              });
+            });
+          }
+
+          // 2) If this is a decoder, also include ALL encoder inputs
+          if (isDecoder) {
+            const encoders = ctx.allDevices.filter((d) =>
+              (d.interfaces ?? []).some((i) => i.toLowerCase().includes('encoder'))
+            );
+
+            encoders.forEach((enc) => {
+              if (Array.isArray(enc.inputs) && enc.inputs.length) {
+                enc.inputs.forEach((inp) => {
+                  options.push({
+                    value: inp.Value,
+                    label: `[${enc.friendlyName ?? enc.id}] ${inp.Name}`,
+                  });
+                });
+              }
+            });
+          }
+
+          return options;
+        },
+      },
+      {
+        key: 'output',
+        label: 'Output',
+        kind: 'select',
+        required: true,
+        options: (ctx, group) => {
+          const deviceId = group?.get('device')?.value;
+          if (!deviceId) return [];
+
+          const selected = ctx.allDevices.find((d) => d.id === deviceId);
+          if (!selected) return [];
+
+          // Always return physical outputs for the selected device (e.g., HDMI 1)
+          if (!Array.isArray(selected.outputs) || !selected.outputs.length) {
+            return [];
+          }
+
+          return selected.outputs.map((out) => ({
+            value: out.Value,
+            label: out.Name,
+          }));
+        },
+      },
     ],
     TogglePage: [
       {
@@ -245,6 +324,7 @@ export class EditPage implements OnInit {
       // Arrays
       SystemOnActions: this.fb.array([]),
       SystemOffActions: this.fb.array([]),
+      Sources: this.fb.array([]),
     });
   }
 
@@ -276,6 +356,14 @@ export class EditPage implements OnInit {
 
   get systemOffActionControls(): FormGroup[] {
     return (this.systemOffActions?.controls ?? []) as FormGroup[];
+  }
+
+  get sources(): FormArray {
+    return this.form.get('Sources') as FormArray;
+  }
+
+  get sourceControls(): FormGroup[] {
+    return (this.sources?.controls ?? []) as FormGroup[];
   }
 
   /** API base (keep simple for now; you can move this to environment.ts later) */
@@ -340,6 +428,8 @@ export class EditPage implements OnInit {
         interfaces: Array.isArray(device?.Interfaces)
           ? device.Interfaces
           : [],
+        inputs: Array.isArray(device?.Inputs) ? device.Inputs : [],
+        outputs: Array.isArray(device?.Outputs) ? device.Outputs : [],
       })
     );
     const pageIds = Array.isArray(cfg?.Pages)
@@ -357,6 +447,14 @@ export class EditPage implements OnInit {
     // Rebuild action arrays
     this.resetActionsArray(this.systemOnActions, cfg.SystemOnActions);
     this.resetActionsArray(this.systemOffActions, cfg.SystemOffActions);
+
+    // Rebuild Sources (object → FormArray)
+    this.sources.clear();
+    const sourcesObj = cfg?.Sources ?? {};
+
+    Object.keys(sourcesObj).forEach((key) => {
+      this.sources.push(this.createSourceGroup(key, sourcesObj[key]));
+    });
 
     // If there are no actions yet, give the user one empty row (optional)
     if (this.systemOnActions.length === 0) this.addSystemOnAction();
@@ -400,14 +498,122 @@ export class EditPage implements OnInit {
       params: this.buildParamsGroup(type, seedWithoutAction),
     });
 
+    // Wire device changes for every action instance
+    const wireDeviceChanges = (g: FormGroup) => {
+      const params = g.get('params') as FormGroup;
+      if (!params) return;
+
+      const deviceCtrl = params.get('device');
+      if (!deviceCtrl) return;
+
+      deviceCtrl.valueChanges.subscribe(() => {
+        const inputCtrl = params.get('input');
+        const outputCtrl = params.get('output');
+
+        if (inputCtrl) inputCtrl.setValue(null);
+        if (outputCtrl) outputCtrl.setValue(null);
+      });
+    };
+
+    wireDeviceChanges(group);
+
     // When action type changes, rebuild params group (keep any overlapping values)
     group.get('action')!.valueChanges.subscribe((newType) => {
       const current = (group.get('params') as FormGroup).getRawValue();
       group.setControl('params', this.buildParamsGroup(newType, current));
+
+      // Re-wire device change logic after params group is rebuilt
+      wireDeviceChanges(group);
     });
 
     return group;
   }
+
+  private createSourceGroup(key: string, seed?: any): FormGroup {
+    const s = seed ?? {};
+
+    return this.fb.group({
+      Key: [key],
+
+      // Keep legacy "name" for template compatibility
+      name: [s.Control ?? key],
+
+      Control: [s.Control ?? key],
+      IsInvisible: [s.IsInvisible ?? false],
+      Label: [s.Label ?? ''],
+      Icon: [s.Icon ?? ''],
+      IconSelected: [s.IconSelected ?? ''],
+      AutoStart: [s.AutoStart ?? false],
+      AutoShutdown: [s.AutoShutdown ?? false],
+      Order: [s.Order ?? 0],
+      Group: [s.Group ?? 'Sources'],
+
+      Actions: this.fb.array(
+        (Array.isArray(s?.Actions) ? s.Actions : []).map((a: any) =>
+          this.createActionGroup(a)
+        )
+      ),
+    });
+  }
+
+addSource(): void {
+  const nextIndex = this.sources.length + 1;
+  const key = `Source_${nextIndex}_Btn`;
+  this.sources.push(this.createSourceGroup(key));
+}
+
+removeSource(index: number): void {
+  this.sources.removeAt(index);
+}
+
+getSourceActionControls(sourceIndex: number): FormGroup[] {
+  const arr = this.sources.at(sourceIndex)?.get('Actions') as FormArray;
+  return (arr?.controls ?? []) as FormGroup[];
+}
+
+addSourceAction(sourceIndex: number): void {
+  const arr = this.sources.at(sourceIndex)?.get('Actions') as FormArray;
+  arr?.push(this.createActionGroup());
+}
+
+removeSourceAction(sourceIndex: number, actionIndex: number): void {
+  const arr = this.sources.at(sourceIndex)?.get('Actions') as FormArray;
+  arr?.removeAt(actionIndex);
+}
+
+getSourceActionFieldSpecs(sourceIndex: number, actionIndex: number): FieldSpec[] {
+  const arr = this.sources.at(sourceIndex)?.get('Actions') as FormArray;
+  if (!arr) return [];
+  return this.getFieldSpecsFor(arr, actionIndex);
+}
+
+getSourceFieldSpecs(sourceIndex: number): {
+  key: string;
+  label: string;
+  kind: 'boolean' | 'text' | 'number';
+}[] {
+  const group = this.sources.at(sourceIndex) as FormGroup;
+  if (!group) return [];
+
+  return Object.keys(group.controls)
+    .filter((k) => k !== 'name' && k !== 'Actions')
+    .map((key) => {
+      const value = group.get(key)?.value;
+
+      const kind =
+        typeof value === 'boolean'
+          ? 'boolean'
+          : typeof value === 'number'
+          ? 'number'
+          : 'text';
+
+      return {
+        key,
+        label: key,
+        kind,
+      };
+    });
+}
 
   // Template helpers for dynamic action rendering
   getActionTypeAt(arr: FormArray, index: number): ActionType {
@@ -419,9 +625,16 @@ export class EditPage implements OnInit {
     return this.actionSpecs[t] ?? [];
   }
 
-  getOptionsForField(field: FieldSpec): Option[] {
+  getOptionsForField(
+    field: FieldSpec,
+    group?: import('@angular/forms').AbstractControl | null
+  ): Option[] {
     if (!field?.options) return [];
-    return field.options(this.ctx());
+
+    const formGroup =
+      group && group instanceof FormGroup ? (group as FormGroup) : undefined;
+
+    return field.options(this.ctx(), formGroup);
   }
 
   addSystemOnAction(): void {
@@ -457,6 +670,20 @@ export class EditPage implements OnInit {
         ...(row?.params ?? {}),
       }));
 
+    const flattenSource = (s: any) => ({
+      ...s,
+      Actions: flattenActions(s?.Actions),
+    });
+
+    const sourcesArray = Array.isArray(raw.Sources) ? raw.Sources : [];
+
+    const sourcesObject = sourcesArray.reduce((acc: any, s: any) => {
+      const key = s.Key || s.Control;
+      const { Key, ...rest } = flattenSource(s);
+      acc[key] = rest;
+      return acc;
+    }, {});
+
     const configToSave = {
       ...raw,
       roomId: this.roomId,
@@ -464,6 +691,7 @@ export class EditPage implements OnInit {
       slaExpireAt: this.toIsoOrNull(raw.slaExpireAt),
       SystemOnActions: flattenActions(raw.SystemOnActions),
       SystemOffActions: flattenActions(raw.SystemOffActions),
+      Sources: sourcesObject,
     };
 
     const url = `${this.apiBase()}/rooms/${this.roomId}`;

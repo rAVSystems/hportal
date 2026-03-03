@@ -1,0 +1,86 @@
+:host {
+  display: block;
+  padding: 24px;
+  box-sizing: border-box;
+  min-height: calc(100vh - 74px);
+  width: 100%;
+}
+
+.edit-page {    
+  width: 100%;
+  //margin: 0 auto;
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  //background-color: green;
+}
+
+.side-nav-bar
+{
+    display: flex;
+    flex: 1;
+    //background-color: blue;
+    height: 100%;
+}
+
+.form { 
+    flex: 6;
+    flex-direction: column;
+    background-color: rgba(225, 225, 225, 0.794);
+    border-radius: 25px;
+}
+
+.edit-form-title{
+    display: flex;
+    align-items: center;
+    flex: 0 1 auto;
+    color: rgb(0, 0, 0);
+    font-size: 30px;
+    font-weight: 400;
+    height: 100%;
+    padding-left: 1.5rem;
+    //background-color: rgba(225, 225, 225, 0.794);
+}
+
+
+.edit-form-actions{
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1 1 auto;
+    //background-color: rgba(225, 225, 225, 0.794);
+    height: 100%;
+    border-radius: 0px 25px 0px 0px;
+    padding-right: 1rem;
+}
+
+.edit-form-header{
+    display: flex;
+    width: 100%;
+    //background-color: #00000067;
+    border-radius: 25px 25px 0px 0px;
+    height: 80px;
+    align-items: center;
+}
+
+button{
+    margin: .5rem;
+}
+
+.form-general-settings{
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: column;
+    margin: 20px;
+    padding: 25px 25px 25px 25px;
+    background-color: white;
+    border-radius: 25px;
+}
+
+mat-form-field{
+    margin-right: 10px;
+}
+
+.section-title{
+    margin-bottom: 2rem;
+}
