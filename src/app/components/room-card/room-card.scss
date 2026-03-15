@@ -14,7 +14,7 @@
   border: 3px solid rgb(0, 0, 0);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.341);
   transition: transform 0.15s ease, box-shadow 0.2s ease;
-  background: #000000d4;
+  background: white;
   cursor: pointer;
 }
 
@@ -30,7 +30,7 @@
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.2px;
-  color: #ffffff;
+  color: #000000;
 }
 
 .room-card__subtitle {
@@ -39,7 +39,7 @@
   font-weight: 500;
   line-height: 1.35;
   opacity: 0.95;
-  color: #ffffffeb;
+  color: #000000eb;
 }
 
 .room-card__kv {
@@ -76,11 +76,12 @@
   justify-content: space-between;
   background: #ffffff;
   box-sizing: border-box;
+  align-items: center;
 }
 
 .room-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 16px rgba(0, 0, 0, 0.354);
+  box-shadow: 0 10px 29px rgba(0, 0, 0, 0.354);
 }
 
 .room-meta {
@@ -96,16 +97,9 @@
   font-size: 13px;
 }
 
-.status-info{
-  display:flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  width: 100%;
-}
-
 .meta-label {
   font-weight: 500;
-  color: #ffffff;
+  color: #000000;
 }
 
 .meta-value {
@@ -180,38 +174,14 @@
   color: #0000003e;
 }
 
-/* Card border color matches room type */
-.room-card.type-classroom {
-  //border-color: #000000;
-}
-
-.room-card.type-conference {
-  //border-color: #000000;
-}
-
-.room-card.type-lecture {
-  //border-color: #000000;
-}
-
-.room-card.type-seminar {
-  //border-color: #000000;
-}
-
-/* Solid header background by room type (true two-section card) */
-.room-card.type-classroom .room-card__header {
-  //background: linear-gradient( #4b4b4b, #000000, #000000);
-}
-
-.room-card.type-conference .room-card__header {
-  //background: linear-gradient( #4b4b4b, #000000, #000000);
-}
-
-.room-card.type-lecture .room-card__header {
-  //background: linear-gradient( #4b4b4b, #000000, #000000);
-}
-
-.room-card.type-seminar .room-card__header {
-  //background: linear-gradient( #4b4b4b, #000000, #000000);
+.status-info{
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(3, auto);
+  gap: 6px 12px;
+  flex: 1 1 auto;
+  width: 100%;
+  //background-color: blue;
 }
 
 .status-label{
@@ -220,4 +190,28 @@
   font-weight: 700;
   line-height: 1.35;
   opacity: 0.95;
+}
+
+.status-cell {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  //background-color: rgba(214, 214, 221, 0.524);
+  border-radius: 10px;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.error-cell {
+  display: flex;
+  font-size: 16px;
+  color: black;
+  text-align: center;
+  background-color: rgba(90, 65, 65, 0.049);
+  width: 100%;
+  height: 70px;
+  margin-bottom: 10px;
+  //border-radius: 15px;
+  justify-content: center;
+  align-items: center;
 }

@@ -1,0 +1,258 @@
+<div class="edit-page">
+    <div class="side-nav-bar">
+        <nav class="side-nav">
+            <a class="side-nav-link" (click)="scrollTo('section-system-settings')">System Settings</a>
+            <a class="side-nav-link" (click)="scrollTo('section-system-on')">System On Actions</a>
+            <a class="side-nav-link" (click)="scrollTo('section-system-off')">System Off Actions</a>
+            <a class="side-nav-link" (click)="scrollTo('section-sources')">Sources</a>
+            <a class="side-nav-link" (click)="scrollTo('section-audio')">Audio Settings</a>
+            <a class="side-nav-link" (click)="scrollTo('section-devices')">Devices</a>
+        </nav>
+        <div class="side-nav-actions">
+            <button mat-flat-button color="primary" type="button" (click)="onSave()" [disabled]="form.invalid || saving()">
+                @if (saving()) { Saving… } @else { Save }
+            </button>
+            <button mat-stroked-button type="button" (click)="onCancel()">Cancel</button>
+        </div>
+    </div>
+    <div class="form">
+        <form class="edit-form" [formGroup]="form" (ngSubmit)="onSave()">
+
+            <div class="edit-form-header">
+                <h2 class="edit-form-title">New Room</h2>
+                <div class="edit-form-actions">
+                    <button mat-stroked-button type="button" (click)="loadTemplate()">Load From Template</button>
+                    <button mat-stroked-button type="button" (click)="saveTemplate()">Save As Template</button>
+                </div>
+            </div>
+
+            <div class="edit-form__section">
+
+                <div class="form-section" id="section-system-settings">
+                    <h2 class="section-title">System Settings</h2>
+                    <div class="settings-grid">
+                        <div>
+                            <label>Campus</label>
+                            <input type="text" formControlName="campus" />
+                        </div>
+                        <div>
+                            <label>Building</label>
+                            <input type="text" formControlName="building" />
+                        </div>
+                        <div>
+                            <label>Room</label>
+                            <input type="text" formControlName="room" />
+                        </div>
+                        <div>
+                            <label>IP</label>
+                            <input type="text" formControlName="ip" />
+                        </div>
+                        <div>
+                            <label>Room Type</label>
+                            <select formControlName="roomType">
+                                @for (t of roomTypes(); track t) {
+                                    <option [value]="t">{{ t }}</option>
+                                }
+                            </select>
+                        </div>
+                        <div>
+                            <label>Version</label>
+                            <input type="number" step="0.1" formControlName="version" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section" id="section-system-on">
+                    <h2 class="section-title">System On Actions</h2>
+                    <table class="config-table">
+                        <thead>
+                            <tr>
+                                <th>Action</th>
+                                <th>Parameters</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody formArrayName="SystemOnActions">
+                            @for (a of systemOnActionControls; track $index; let i = $index) {
+                                <tr [formGroupName]="i">
+                                    <td>
+                                        <div class="table-param-field">
+                                            <label>Action</label>
+                                            <select formControlName="action">
+                                                @for (opt of actionTypes(); track opt) {
+                                                    <option [value]="opt">{{ opt }}</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    </td>
+                                    <td formGroupName="params">
+                                        <div class="table-param-list">
+                                            @for (field of getFieldSpecsFor(systemOnActions, i); track field.key) {
+                                                <div class="table-param-field">
+                                                    <label>{{ field.label }}</label>
+                                                    @if (field.kind === 'select') {
+                                                        <select [formControlName]="field.key"
+                                                            (change)="field.key === 'device' ? onDeviceChange('SystemOnActions', i, $any($event.target).value) : null">
+                                                            @for (opt of getOptionsForField(field, 'SystemOnActions', systemOnActions, i); track opt.value) {
+                                                                <option [value]="opt.value">{{ opt.label }}</option>
+                                                            }
+                                                        </select>
+                                                    }
+                                                    @if (field.kind === 'text') {
+                                                        <input type="text" [formControlName]="field.key" />
+                                                    }
+                                                    @if (field.kind === 'number') {
+                                                        <input type="number" [formControlName]="field.key" />
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button mat-icon-button type="button" (click)="removeSystemOnAction(i)">
+                                            <mat-icon>delete</mat-icon>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                            <tr class="table-add-row">
+                                <td colspan="3">
+                                    <button mat-stroked-button type="button" (click)="addSystemOnAction()">Add Action</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="form-section" id="section-system-off">
+                    <h2 class="section-title">System Off Actions</h2>
+                    <table class="config-table">
+                        <thead>
+                            <tr>
+                                <th>Action</th>
+                                <th>Parameters</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody formArrayName="SystemOffActions">
+                            @for (a of systemOffActionControls; track $index; let i = $index) {
+                                <tr [formGroupName]="i">
+                                    <td>
+                                        <div class="table-param-field">
+                                            <label>Action</label>
+                                            <select formControlName="action">
+                                                @for (opt of actionTypes(); track opt) {
+                                                    <option [value]="opt">{{ opt }}</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    </td>
+                                    <td formGroupName="params">
+                                        <div class="table-param-list">
+                                            @for (field of getFieldSpecsFor(systemOffActions, i); track field.key) {
+                                                <div class="table-param-field">
+                                                    <label>{{ field.label }}</label>
+                                                    @if (field.kind === 'select') {
+                                                        <select [formControlName]="field.key"
+                                                            (change)="field.key === 'device' ? onDeviceChange('SystemOffActions', i, $any($event.target).value) : null">
+                                                            @for (opt of getOptionsForField(field, 'SystemOffActions', systemOffActions, i); track opt.value) {
+                                                                <option [value]="opt.value">{{ opt.label }}</option>
+                                                            }
+                                                        </select>
+                                                    }
+                                                    @if (field.kind === 'text') {
+                                                        <input type="text" [formControlName]="field.key" />
+                                                    }
+                                                    @if (field.kind === 'number') {
+                                                        <input type="number" [formControlName]="field.key" />
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button mat-icon-button type="button" (click)="removeSystemOffAction(i)">
+                                            <mat-icon>delete</mat-icon>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                            <tr class="table-add-row">
+                                <td colspan="3">
+                                    <button mat-stroked-button type="button" (click)="addSystemOffAction()">Add Action</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="form-section" id="section-sources">
+                    <h2 class="section-title">Source Settings</h2>
+                    <table class="config-table">
+                        <thead>
+                            <tr>
+                                <th>Label</th>
+                                <th>Order</th>
+                                <th>Auto Start</th>
+                                <th>Actions</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="table-add-row">
+                                <td colspan="5">
+                                    <button mat-stroked-button type="button">Add Source</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="form-section" id="section-audio">
+                    <h2 class="section-title">Audio Settings</h2>
+                    <table class="config-table">
+                        <thead>
+                            <tr>
+                                <th>Device</th>
+                                <th>Type</th>
+                                <th>Default Level</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="table-add-row">
+                                <td colspan="4">
+                                    <button mat-stroked-button type="button">Add Audio Device</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="form-section" id="section-devices">
+                    <h2 class="section-title">Devices</h2>
+                    <table class="config-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>IP</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="table-add-row">
+                                <td colspan="4">
+                                    <button mat-stroked-button type="button">Add Device</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+    <div class="side-nav-bar"></div>
+</div>

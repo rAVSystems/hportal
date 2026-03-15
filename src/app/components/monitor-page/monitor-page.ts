@@ -2,6 +2,7 @@ import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Router } from '@angular/router';
 
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -113,8 +114,13 @@ export class MonitorPage implements OnInit {
 
   constructor(
     private http: HttpClient,
-    public auth: AuthService
+    public auth: AuthService,
+    private router: Router
   ) {}
+
+  goToNewRoom(): void {
+    this.router.navigate(['/newroom']);
+  }
 
   ngOnInit(): void {
     this.loadRooms();

@@ -19,14 +19,28 @@
   justify-content: center;
   align-items: center;
   gap: 1rem;
-  //margin-top: 1rem;
+  padding-top: 1rem;
   //margin-bottom: 1rem;
   //border-radius: 25px;
   background-color: rgba(238, 238, 238, 0.806);
 
   /* give flex a real vertical reference */
-  padding-top: 1rem;
-  min-height: 80px;
+  //padding: 1rem;
+  min-height: 60px;
+  box-sizing: border-box;
+}
+
+.dashboard-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.75rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.75rem;
+  }
 }
 
 
@@ -52,6 +66,8 @@
   width: 220px;
   max-width: 100%;
 }
+
+/* --- Shared content area (aligns header and grid) --- */
 
 /* --- Room cards grid --- */
 .room-grid {

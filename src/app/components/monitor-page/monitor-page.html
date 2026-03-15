@@ -63,9 +63,14 @@
         </mat-select>
       </mat-form-field>
     </div>
+
   </div>
 
   <div class="room-grid">
+    <div class="dashboard-header">
+      <h2>Dashboard</h2>
+      <button mat-flat-button color="primary" (click)="goToNewRoom()">New Room</button>
+    </div>
     @for (room of filteredRooms(); track room._id) {
       <app-room-card class="room-card" [room]="room" />
     }

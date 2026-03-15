@@ -12,12 +12,6 @@
     <form class="edit-form" [formGroup]="form" (ngSubmit)="onSave()">
       <div class="edit-form__header">
         <h2 class="edit-form__title">Edit Room</h2>
-        <div class="edit-form__actions">
-          <button mat-stroked-button type="button" (click)="onCancel()">Cancel</button>
-          <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">
-            @if (saving()) { Saving… } @else { Save }
-          </button>
-        </div>
       </div>
 
       <mat-accordion class="edit-form__accordion" multi>

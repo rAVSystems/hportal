@@ -93,6 +93,9 @@ export class EditPage2 {
     'All-In-One Conference Room'
   ]);
 
+  /** Maps "arrayName-index" -> selected deviceId, so template can react to device selection */
+  selectedDevices = signal<Record<string, string>>({});
+
   // Options used by select fields (populated from loaded config)
   readonly ctx = signal<EditorContext>({
     allDevices: [],
@@ -158,7 +161,11 @@ export class EditPage2 {
         kind: 'select',
         required: true,
         options: (ctx, group) => {
-          const deviceId = group?.get('device')?.value;
+          const deviceId =
+            group?.get('device')?.value ??
+            group?.get('params.device')?.value ??
+            group?.get('params')?.get('device')?.value;
+
           if (!deviceId) return [];
 
           const selected = ctx.allDevices.find((d) => d.id === deviceId);
@@ -206,7 +213,11 @@ export class EditPage2 {
         kind: 'select',
         required: true,
         options: (ctx, group) => {
-          const deviceId = group?.get('device')?.value;
+          const deviceId =
+            group?.get('device')?.value ??
+            group?.get('params.device')?.value ??
+            group?.get('params')?.get('device')?.value;
+
           if (!deviceId) return [];
 
           const selected = ctx.allDevices.find((d) => d.id === deviceId);
@@ -493,7 +504,7 @@ export class EditPage2 {
         deviceCtrl.valueChanges.subscribe(() => {
           const inputCtrl = params.get('input');
           const outputCtrl = params.get('output');
-  
+
           if (inputCtrl) inputCtrl.setValue(null);
           if (outputCtrl) outputCtrl.setValue(null);
         });
@@ -501,11 +512,24 @@ export class EditPage2 {
   
       wireDeviceChanges(group);
   
-      // When action type changes, rebuild params group (keep any overlapping values)
+      // When action type changes, always rebuild params group from latest schema
       group.get('action')!.valueChanges.subscribe((newType) => {
-        const current = (group.get('params') as FormGroup).getRawValue();
-        group.setControl('params', this.buildParamsGroup(newType, current));
-  
+        const oldParams = group.get('params');
+
+        // Build a fresh params group from the schema
+        const newParams = this.buildParamsGroup(newType);
+
+        // Remove the old params control first to avoid Angular keeping stale references
+        if (oldParams) {
+          (group as any).removeControl('params');
+        }
+
+        // Add the new params group
+        group.addControl('params', newParams);
+
+        // Trigger validation / change detection
+        newParams.updateValueAndValidity({ emitEvent: true });
+
         // Re-wire device change logic after params group is rebuilt
         wireDeviceChanges(group);
       });
@@ -564,6 +588,34 @@ export class EditPage2 {
     const arr = this.sources.at(sourceIndex)?.get('Actions') as FormArray;
     arr?.removeAt(actionIndex);
   }
+
+  /** Table helpers for Sources table */
+
+  getSourceLabel(index: number): string {
+    const g = this.sources.at(index) as FormGroup;
+    return g?.get('Label')?.value ?? '';
+  }
+
+  getSourceOrder(index: number): number {
+    const g = this.sources.at(index) as FormGroup;
+    return g?.get('Order')?.value ?? 0;
+  }
+
+  getSourceAutoStart(index: number): boolean {
+    const g = this.sources.at(index) as FormGroup;
+    return !!g?.get('AutoStart')?.value;
+  }
+
+  getSourceActionCount(index: number): number {
+    const arr = this.sources.at(index)?.get('Actions') as FormArray;
+    return arr?.length ?? 0;
+  }
+
+  /** Placeholder for future dialog editor */
+  editSource(index: number): void {
+    const g = this.sources.at(index) as FormGroup;
+    console.log('Edit source', g?.value);
+  }
   
   getSourceActionFieldSpecs(sourceIndex: number, actionIndex: number): FieldSpec[] {
     const arr = this.sources.at(sourceIndex)?.get('Actions') as FormArray;
@@ -609,16 +661,20 @@ export class EditPage2 {
       return this.actionSpecs[t] ?? [];
     }
   
-    getOptionsForField(
-      field: FieldSpec,
-      group?: import('@angular/forms').AbstractControl | null
-    ): Option[] {
+    onDeviceChange(arrName: string, index: number, deviceId: string): void {
+      this.selectedDevices.update(map => ({ ...map, [`${arrName}-${index}`]: deviceId }));
+    }
+
+    getOptionsForField(field: FieldSpec, arrName: string, arr: FormArray, index: number): Option[] {
       if (!field?.options) return [];
-  
-      const formGroup =
-        group && group instanceof FormGroup ? (group as FormGroup) : undefined;
-  
-      return field.options(this.ctx(), formGroup);
+
+      const deviceId = this.selectedDevices()[`${arrName}-${index}`]
+        ?? (arr.at(index) as FormGroup)?.get('params')?.get('device')?.value
+        ?? '';
+
+      const fakeGroup = { get: (key: string) => key === 'device' ? { value: deviceId } : null } as any;
+
+      return field.options(this.ctx(), fakeGroup);
     }
   
     addSystemOnAction(): void {
@@ -637,6 +693,10 @@ export class EditPage2 {
       this.systemOffActions.removeAt(index);
     }
   
+    scrollTo(id: string): void {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    }
+
     onCancel(): void {
       this.router.navigate(['/monitor']);
     }
