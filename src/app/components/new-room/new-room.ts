@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { AuthService } from '../../services/auth-service';
 import {
   FormArray,
   FormBuilder,
@@ -23,7 +24,8 @@ type ActionType =
   | 'TogglePage'
   | 'ShowPage'
   | 'HidePage'
-  | 'StartAutoshutdown';
+  | 'StartAutoshutdown'
+  | 'SetGain';
 
 type Option = { value: string; label: string };
 
@@ -38,6 +40,7 @@ type EditorContext = {
   pageIds: string[];
   layerIds: string[];
   transitions: string[];
+  gainIds: string[];
 };
 
 type FieldSpec = {
@@ -45,6 +48,8 @@ type FieldSpec = {
   label: string;
   kind: 'text' | 'number' | 'select';
   required?: boolean;
+  min?: number;
+  max?: number;
   options?: (ctx: EditorContext, group?: FormGroup) => Option[];
 };
 
@@ -65,6 +70,10 @@ type FieldSpec = {
 export class NewRoom {
   saving = signal(false);
   errorMessage = signal<string | null>(null);
+  showTemplateModal = signal(false);
+  templates = signal<{ _id: string; name: string; icon: string; createdby: string; created: string; permission: string }[]>([]);
+  templatesLoading = signal(false);
+  templatesError = signal<string | null>(null);
 
   roomTypes = signal<string[]>([
     'Classroom',
@@ -80,6 +89,7 @@ export class NewRoom {
     pageIds: [],
     layerIds: [],
     transitions: ['None', 'Fade', 'Slide'],
+    gainIds: [],
   });
 
   selectedDevices = signal<Record<string, string>>({});
@@ -224,6 +234,16 @@ export class NewRoom {
     StartAutoshutdown: [
       { key: 'seconds', label: 'Seconds', kind: 'number', required: true },
     ],
+    SetGain: [
+      {
+        key: 'gain',
+        label: 'Gain',
+        kind: 'select',
+        required: true,
+        options: (c) => c.gainIds.map((g) => ({ value: g, label: g })),
+      },
+      { key: 'level', label: 'Level', kind: 'number', required: true, min: 0, max: 100 },
+    ],
   };
 
   readonly actionTypes = signal<ActionType[]>(
@@ -235,7 +255,8 @@ export class NewRoom {
   constructor(
     private readonly fb: FormBuilder,
     private readonly http: HttpClient,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly auth: AuthService
   ) {
     this.form = this.fb.group({
       campus: ['', Validators.required],
@@ -394,7 +415,68 @@ export class NewRoom {
   }
 
   loadTemplate(): void {
-    // TODO: implement template loading
+    this.showTemplateModal.set(true);
+    this.templatesLoading.set(true);
+    this.templatesError.set(null);
+
+    const apiBase = (window as any).API_BASE_URL || 'http://192.168.1.225:8080';
+    const token = this.auth.token();
+    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+    this.http.get<{ _id: string; name: string; icon: string; createdby: string; created: string; permission: string }[]>(`${apiBase}/templates`, { headers }).subscribe({
+      next: (data) => {
+        this.templates.set(data);
+        this.templatesLoading.set(false);
+      },
+      error: (err) => {
+        this.templatesError.set(err?.error?.error || err?.message || 'Failed to load templates.');
+        this.templatesLoading.set(false);
+      },
+    });
+  }
+
+  applyTemplate(template: { _id: string; name: string }): void {
+    this.showTemplateModal.set(false);
+
+    const apiBase = (window as any).API_BASE_URL || 'http://192.168.1.225:8080';
+    const token = this.auth.token();
+    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+    this.http.get<{ _id: string; name: string; config: any }>(`${apiBase}/templates/${template._id}`, { headers }).subscribe({
+      next: (doc) => {
+        const config = doc.config;
+        if (!config) return;
+
+        this.form.patchValue({
+          campus: config.campus ?? '',
+          building: config.building ?? '',
+          room: config.room ?? '',
+          ip: config.ip ?? '',
+          roomType: config.roomType ?? '',
+          version: config.version ?? 1,
+        });
+
+        this.systemOnActions.clear();
+        (config.SystemOnActions ?? []).forEach((a: any) => this.addActionFromConfig(this.systemOnActions, a));
+
+        this.systemOffActions.clear();
+        (config.SystemOffActions ?? []).forEach((a: any) => this.addActionFromConfig(this.systemOffActions, a));
+      },
+    });
+  }
+
+  private addActionFromConfig(arr: any, a: any): void {
+    const { action, ...params } = a;
+    const actionType = action as ActionType;
+    const fields = this.actionSpecs[actionType] ?? [];
+    const paramsGroup = this.fb.group(
+      Object.fromEntries(fields.map((f) => [f.key, [params[f.key] ?? null]]))
+    );
+    arr.push(this.fb.group({ action: [actionType], params: paramsGroup }));
+  }
+
+  closeTemplateModal(): void {
+    this.showTemplateModal.set(false);
   }
 
   saveTemplate(): void {

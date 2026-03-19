@@ -1,3 +1,50 @@
+@if (showTemplateModal()) {
+  <div class="modal-backdrop" (click)="closeTemplateModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Load From Template</h3>
+        <button mat-icon-button type="button" (click)="closeTemplateModal()"><mat-icon>close</mat-icon></button>
+      </div>
+      <div class="modal-body">
+        @if (templatesLoading()) {
+          <p>Loading templates...</p>
+        } @else if (templatesError()) {
+          <p class="modal-error">{{ templatesError() }}</p>
+        } @else if (templates().length === 0) {
+          <p>No templates found.</p>
+        } @else {
+          <table class="template-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Name</th>
+                <th>Created By</th>
+                <th>Permission</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (t of templates(); track t._id) {
+                <tr class="template-row" (click)="applyTemplate(t)">
+                  <td class="template-icon-cell">
+                    <mat-icon class="template-mat-icon">{{ t.icon }}</mat-icon>
+                  </td>
+                  <td class="template-name-cell">{{ t.name }}</td>
+                  <td class="template-createdby-cell">{{ t.createdby }}</td>
+                  <td class="template-permission-cell">
+                    <span class="template-permission">{{ t.permission }}</span>
+                  </td>
+                  <td class="template-date-cell">{{ t.created | date:'mediumDate' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </div>
+  </div>
+}
+
 <div class="edit-page">
     <div class="side-nav-bar">
         <nav class="side-nav">
@@ -102,7 +149,7 @@
                                                         <input type="text" [formControlName]="field.key" />
                                                     }
                                                     @if (field.kind === 'number') {
-                                                        <input type="number" [formControlName]="field.key" />
+                                                        <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" />
                                                     }
                                                 </div>
                                             }
@@ -164,7 +211,7 @@
                                                         <input type="text" [formControlName]="field.key" />
                                                     }
                                                     @if (field.kind === 'number') {
-                                                        <input type="number" [formControlName]="field.key" />
+                                                        <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" />
                                                     }
                                                 </div>
                                             }

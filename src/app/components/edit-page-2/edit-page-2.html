@@ -122,7 +122,7 @@
                     }
 
                     @if (field.kind === 'number') {
-                      <input type="number" [formControlName]="field.key" />
+                      <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" />
                     }
                   </div>
                 }
@@ -193,7 +193,7 @@
                     }
 
                     @if (field.kind === 'number') {
-                      <input type="number" [formControlName]="field.key" />
+                      <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" />
                     }
                   </div>
                 }

@@ -32,7 +32,8 @@ type ActionType =
   | 'TogglePage'
   | 'ShowPage'
   | 'HidePage'
-  | 'StartAutoshutdown';
+  | 'StartAutoshutdown'
+  | 'SetGain';
 
 type Option = { value: string; label: string };
 
@@ -47,6 +48,7 @@ type EditorContext = {
   pageIds: string[];
   layerIds: string[];
   transitions: string[];
+  gainIds: string[];
 };
 
 type FieldSpec = {
@@ -54,6 +56,8 @@ type FieldSpec = {
   label: string;
   kind: 'text' | 'number' | 'select';
   required?: boolean;
+  min?: number;
+  max?: number;
   options?: (ctx: EditorContext, group?: FormGroup) => Option[];
 };
 
@@ -102,6 +106,7 @@ export class EditPage2 {
     pageIds: [],
     layerIds: [],
     transitions: ['None'],
+    gainIds: [],
   });
 
   /** Action schema registry */
@@ -286,6 +291,16 @@ export class EditPage2 {
     StartAutoshutdown: [
       { key: 'seconds', label: 'Seconds', kind: 'number', required: true },
     ],
+    SetGain: [
+      {
+        key: 'gain',
+        label: 'Gain',
+        kind: 'select',
+        required: true,
+        options: (c) => c.gainIds.map((g) => ({ value: g, label: g })),
+      },
+      { key: 'level', label: 'Level', kind: 'number', required: true, min: 0, max: 100 },
+    ],
   };
 
   readonly actionTypes = signal<ActionType[]>(
@@ -431,12 +446,14 @@ export class EditPage2 {
         ? cfg.Pages.map((p: any) => p?.Id).filter(Boolean)
         : [];
       const transitions = ['None', 'Fade', 'Slide'];
-  
+      const gainIds = Object.keys(cfg?.Gains ?? {});
+
       this.ctx.set({
         allDevices,
         pageIds,
         layerIds: [],
         transitions,
+        gainIds,
       });
   
       // Rebuild action arrays
@@ -451,9 +468,6 @@ export class EditPage2 {
         this.sources.push(this.createSourceGroup(key, sourcesObj[key]));
       });
   
-      // If there are no actions yet, give the user one empty row (optional)
-      if (this.systemOnActions.length === 0) this.addSystemOnAction();
-      if (this.systemOffActions.length === 0) this.addSystemOffAction();
     }
   
     private resetActionsArray(arr: FormArray, values: any): void {
