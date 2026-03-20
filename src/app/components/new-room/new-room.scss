@@ -117,6 +117,7 @@ button {
   padding: 25px;
   background-color: white;
   border-radius: 25px;
+  overflow-x: hidden;
 }
 
 .settings-grid {
@@ -366,4 +367,160 @@ button {
   border-radius: 4px;
   padding: 0.2rem 0.5rem;
   text-transform: capitalize;
+}
+
+/* ── Device table ── */
+.device-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.device-summary-row {
+  cursor: pointer;
+
+  td {
+    padding: 10px 12px;
+    vertical-align: middle;
+  }
+
+  // override the nth-child flex rule for device rows
+  td:nth-child(2) {
+    display: table-cell;
+  }
+
+  .inline-input,
+  .inline-select {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+.expand-cell {
+  width: 36px;
+  color: #888;
+}
+
+.inline-input {
+  height: 34px;
+  padding: 4px 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  width: 100%;
+
+  &.half {
+    width: calc(50% - 4px);
+    &:first-of-type { margin-right: 8px; }
+  }
+
+  &.full {
+    width: 100%;
+  }
+}
+
+.inline-select {
+  height: 34px;
+  padding: 4px 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  width: 100%;
+  appearance: auto;
+}
+
+.device-detail-row td {
+  background: #f9fafc;
+  padding: 0;
+  border-bottom: 2px solid #ddd;
+}
+
+.device-detail {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.device-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  padding-top: 4px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  text-transform: none;
+  font-weight: normal;
+  letter-spacing: normal;
+}
+
+.io-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.io-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.io-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.io-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th {
+    text-align: left;
+    padding: 4px 8px;
+    font-weight: 600;
+    border-bottom: 1px solid #ddd;
+    color: #666;
+  }
+
+  td {
+    padding: 4px 8px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+
+    &:nth-child(2) {
+      display: table-cell;
+    }
+  }
 }

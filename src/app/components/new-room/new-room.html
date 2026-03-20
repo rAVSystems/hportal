@@ -278,19 +278,136 @@
 
                 <div class="form-section" id="section-devices">
                     <h2 class="section-title">Devices</h2>
-                    <table class="config-table">
+                    <table class="config-table device-table" formArrayName="Devices">
+                        <colgroup>
+                            <col style="width: 40px" />
+                            <col style="width: 14%" />
+                            <col style="width: 20%" />
+                            <col style="width: 14%" />
+                            <col style="width: 14%" />
+                            <col style="width: 12%" />
+                            <col style="width: 18%" />
+                            <col style="width: 40px" />
+                        </colgroup>
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Type</th>
-                                <th>IP</th>
+                                <th></th>
+                                <th>Key</th>
+                                <th>Friendly Name</th>
+                                <th>Make</th>
+                                <th>Model</th>
+                                <th>Control Type</th>
+                                <th>IP Address</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody>
+                            @for (device of deviceControls; track $index; let di = $index) {
+                                <ng-container [formGroupName]="di">
+                                    <tr class="device-summary-row" (click)="toggleDeviceExpand(di)">
+                                        <td class="expand-cell">
+                                            <mat-icon>{{ isDeviceExpanded(di) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                                        </td>
+                                        <td><input class="inline-input" formControlName="key" (click)="$event.stopPropagation()" placeholder="e.g. Proj-1" /></td>
+                                        <td><input class="inline-input" formControlName="FriendlyName" (click)="$event.stopPropagation()" placeholder="Friendly Name" /></td>
+                                        <td><input class="inline-input" formControlName="Make" (click)="$event.stopPropagation()" placeholder="Make" /></td>
+                                        <td><input class="inline-input" formControlName="Model" (click)="$event.stopPropagation()" placeholder="Model" /></td>
+                                        <td>
+                                            <select class="inline-select" formControlName="ControlType" (click)="$event.stopPropagation()">
+                                                @for (ct of controlTypeOptions; track ct) {
+                                                    <option [value]="ct">{{ ct }}</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td><input class="inline-input" formControlName="IpAddress" (click)="$event.stopPropagation()" placeholder="IP Address" /></td>
+                                        <td>
+                                            <button mat-icon-button type="button" (click)="$event.stopPropagation(); removeDevice(di)">
+                                                <mat-icon>delete</mat-icon>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    @if (isDeviceExpanded(di)) {
+                                        <tr class="device-detail-row">
+                                            <td colspan="8">
+                                                <div class="device-detail">
+                                                    <div class="device-detail-grid">
+                                                        <div class="detail-field">
+                                                            <label>Description</label>
+                                                            <input class="inline-input full" formControlName="Description" placeholder="Description" />
+                                                        </div>
+                                                        @if (device.get('Interfaces')?.get('switcher')?.value) {
+                                                        <div class="detail-field">
+                                                            <label>Default Input</label>
+                                                            <input class="inline-input" type="number" formControlName="DefaultInput" placeholder="0" />
+                                                        </div>
+                                                        }
+                                                        <div class="detail-field">
+                                                            <label>Username</label>
+                                                            <input class="inline-input" formControlName="Username" placeholder="Username" />
+                                                        </div>
+                                                        <div class="detail-field">
+                                                            <label>Password</label>
+                                                            <input class="inline-input" formControlName="Password" placeholder="Password" />
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="detail-field" formGroupName="Interfaces">
+                                                        <label>Interfaces</label>
+                                                        <div class="checkbox-group">
+                                                            @for (iface of interfaceOptions; track iface) {
+                                                                <label class="checkbox-label">
+                                                                    <input type="checkbox" [formControlName]="iface" />
+                                                                    {{ iface }}
+                                                                </label>
+                                                            }
+                                                        </div>
+                                                    </div>
+
+                                                    @if (device.get('Interfaces')?.get('switcher')?.value) {
+                                                    <div class="io-section">
+                                                        <div class="io-group">
+                                                            <label class="io-title">Inputs</label>
+                                                            <table class="io-table" formArrayName="Inputs">
+                                                                <thead><tr><th>Name</th><th>Value</th><th></th></tr></thead>
+                                                                <tbody>
+                                                                    @for (inp of getInputsArray(di).controls; track inp; let ii = $index) {
+                                                                        <tr [formGroupName]="ii">
+                                                                            <td><input class="inline-input" formControlName="Name" placeholder="Name" /></td>
+                                                                            <td><input class="inline-input" formControlName="Value" placeholder="Value" /></td>
+                                                                            <td><button mat-icon-button type="button" (click)="removeInput(di, ii)"><mat-icon>remove</mat-icon></button></td>
+                                                                        </tr>
+                                                                    }
+                                                                    <tr><td colspan="3"><button mat-stroked-button type="button" (click)="addInput(di)">Add Input</button></td></tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                        <div class="io-group">
+                                                            <label class="io-title">Outputs</label>
+                                                            <table class="io-table" formArrayName="Outputs">
+                                                                <thead><tr><th>Name</th><th>Value</th><th></th></tr></thead>
+                                                                <tbody>
+                                                                    @for (out of getOutputsArray(di).controls; track out; let oi = $index) {
+                                                                        <tr [formGroupName]="oi">
+                                                                            <td><input class="inline-input" formControlName="Name" placeholder="Name" /></td>
+                                                                            <td><input class="inline-input" formControlName="Value" placeholder="Value" /></td>
+                                                                            <td><button mat-icon-button type="button" (click)="removeOutput(di, oi)"><mat-icon>remove</mat-icon></button></td>
+                                                                        </tr>
+                                                                    }
+                                                                    <tr><td colspan="3"><button mat-stroked-button type="button" (click)="addOutput(di)">Add Output</button></td></tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </ng-container>
+                            }
                             <tr class="table-add-row">
-                                <td colspan="4">
-                                    <button mat-stroked-button type="button">Add Device</button>
+                                <td colspan="8">
+                                    <button mat-stroked-button type="button" (click)="addDevice()">Add Device</button>
                                 </td>
                             </tr>
                         </tbody>
