@@ -1,0 +1,39 @@
+.control-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.control-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 1280px;
+  margin-bottom: 1rem;
+}
+
+.control-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.iframe-wrapper {
+  width: 1280px;
+  height: 800px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+
+  iframe {
+    display: block;
+    width: 1280px;
+    height: 800px;
+    border: none;
+  }
+}

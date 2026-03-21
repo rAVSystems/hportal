@@ -19,10 +19,16 @@
 }
 
 .room-card__header {
-  padding: 14px 16px 10px 16px;
-  //min-height: 96px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 10px 10px 16px;
   box-sizing: border-box;
   border-bottom: 3px solid black;
+}
+
+.header-text {
+  flex: 1 1 auto;
 }
 
 .room-card__title {
@@ -157,21 +163,7 @@
 }
 
 .sla-tag {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 0.3rem 0.7rem;
-  border-radius: 5px; /* matches room-type badge style */
-  border: 1px solid rgb(255, 255, 255);
-
-  //background: linear-gradient(#ad41414d, #420000);
-  color: #0000003e;
+  display: none; // replaced by touch button in header
 }
 
 .status-info{
@@ -202,16 +194,167 @@
   justify-content: flex-start;
 }
 
+.touch-btn {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid #333;
+  background: rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  mat-icon {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    color: #222;
+  }
+
+  &:hover {
+    background: rgba(0,0,0,0.15);
+  }
+}
+
+.indicator-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 6px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  .indicator-icon {
+    width: 41px;
+    height: 41px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  mat-icon {
+    font-size: 35px;
+    width: 35px;
+    height: 35px;
+    color: #ccc;
+  }
+
+  span {
+    font-size: 11px;
+    font-weight: 600;
+    color: #555;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  &.active mat-icon {
+    color: #43a047;
+  }
+
+  &.occupied mat-icon {
+    color: #29b6f6;
+  }
+
+  &.recording mat-icon {
+    color: #e53935;
+  }
+
+  &.temp-warn mat-icon {
+    color: #fb8c00;
+  }
+
+  &.active svg circle.progress {
+    stroke: #43a047;
+  }
+}
+
+.lamp-hours-text {
+  font-size: 9px;
+  font-weight: 700;
+  fill: #333;
+}
+
 .error-cell {
   display: flex;
   font-size: 16px;
   color: black;
   text-align: center;
-  background-color: rgba(90, 65, 65, 0.049);
+  background-color: rgba(134, 134, 134, 0.107);
   width: 100%;
   height: 70px;
   margin-bottom: 10px;
   //border-radius: 15px;
   justify-content: center;
   align-items: center;
+  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.293);
+}
+
+.gui-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gui-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: 280px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+}
+
+.gui-modal-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 8px;
+}
+
+.gui-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid #ddd;
+  background: #f9f9f9;
+  font-size: 18px;
+  font-weight: 600;
+  color: #222;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+
+  mat-icon {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+  }
+
+  &:hover {
+    background: #e8f0fe;
+    border-color: #4285f4;
+    color: #4285f4;
+
+    mat-icon { color: #4285f4; }
+  }
 }

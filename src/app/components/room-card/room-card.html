@@ -1,58 +1,83 @@
 <div class="room-card-container">
   <div class="room-card" [ngClass]="cardTypeClasses()" [routerLink]="['/edit', room()._id]" role="button" tabindex="0">
 
-    <!-- SLA / Service Tag (top-right) -->
-    <div class="sla-tag" [ngClass]="cardTypeClasses()">
-      <div class="sla-tag-label">{{cfg().sla}}</div>
-    </div>
-
-    <!-- Header (Top 1/3 colored band) -->
+    <!-- Header -->
     <div class="room-card__header">
-      <div class="room-card__title">
-        {{ cfg().building }} · {{ cfg().room }}
+      <div class="header-text">
+        <div class="room-card__title">{{ cfg().building }} · {{ cfg().room }}</div>
+        <div class="room-card__subtitle">{{ cfg().campus }} | Cambridge</div>
       </div>
-      <div class="room-card__subtitle">
-        {{ cfg().campus }} | Cambridge
-      </div>
+      <button class="touch-btn" (click)="$event.stopPropagation(); showGuiModal.set(true)">
+        <mat-icon>touch_app</mat-icon>
+      </button>
     </div>
 
-    <!-- Content (Bottom section) -->
+    <!-- Content -->
     <div class="room-card__content">
 
-
-      <div class="status-info">
-        <div class="status-cell">
-          <div class="status-label">Online</div>
+      <!-- Indicator rows -->
+      <div class="indicator-grid">
+        <!-- Row 1 -->
+        <div class="indicator" [class.occupied]="occupied" [title]="occupied ? 'Occupied' : 'Vacant'">
+          <div class="indicator-icon"><mat-icon>{{ occupied ? 'person' : 'person_off' }}</mat-icon></div>
+          <span>{{ occupied ? 'Occupied' : 'Vacant' }}</span>
         </div>
-        <div class="status-cell">
-          <div class="status-label">2132 Hours</div>
+        <div class="indicator" [class.active]="systemActive" [title]="systemActive ? 'System On' : 'System Off'">
+          <div class="indicator-icon"><mat-icon>power_settings_new</mat-icon></div>
+          <span>{{ systemActive ? 'System On' : 'System Off' }}</span>
         </div>
-                <div class="status-cell">
-
+        <div class="indicator" [class.recording]="recording" [title]="recording ? 'Recording' : 'Not Recording'">
+          <div class="indicator-icon"><mat-icon>{{ recording ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon></div>
+          <span>{{ recording ? 'Recording' : 'Not Rec.' }}</span>
         </div>
-        <div class="status-cell">
-
+        <!-- Row 2 -->
+        <div class="indicator" [title]="lampHours + ' Hours'">
+          <div class="indicator-icon">
+            <svg width="41" height="41" viewBox="0 0 41 41">
+              <circle cx="20.5" cy="20.5" [attr.r]="lampRadius" fill="none" stroke="#e0e0e0" stroke-width="4"/>
+              <circle cx="20.5" cy="20.5" [attr.r]="lampRadius" fill="none"
+                [attr.stroke]="lampColor" stroke-width="4" stroke-linecap="round"
+                [attr.stroke-dasharray]="lampCircumference"
+                [attr.stroke-dashoffset]="lampDashOffset"
+                transform="rotate(-90 20.5 20.5)"/>
+              <text x="20.5" y="24.5" text-anchor="middle" class="lamp-hours-text">{{ lampHours }}</text>
+            </svg>
+          </div>
+          <span>Lamp Hrs</span>
         </div>
-                <div class="status-cell">
+        <div class="indicator active" title="Online">
+          <div class="indicator-icon"><mat-icon>lan</mat-icon></div>
+          <span>Online</span>
         </div>
-        <div class="status-cell">
+        <div class="indicator temp-warn" title="Temp High">
+          <div class="indicator-icon"><mat-icon>thermostat</mat-icon></div>
+          <span>Temp High</span>
         </div>
       </div>
 
-      <div class="error-cell">
-        System in standby
-      </div>
+      <div class="error-cell">System in standby</div>
 
       <div class="room-badge-row">
-        <span class="room-type-badge" [ngClass]="cardTypeClasses()">
-          {{ cfg().roomType }}
-        </span>
-
-        <span class="version-badge">
-          v{{ cfg().version }}
-        </span>
+        <span class="room-type-badge" [ngClass]="cardTypeClasses()">{{ cfg().roomType }}</span>
+        <span class="version-badge">v{{ cfg().version }}</span>
       </div>
     </div>
 
   </div>
 </div>
+
+@if (showGuiModal()) {
+  <div class="gui-overlay" (click)="showGuiModal.set(false)">
+    <div class="gui-modal" (click)="$event.stopPropagation()">
+      <div class="gui-modal-title">Select To Control</div>
+      <button class="gui-btn" (click)="goToControl()">
+        <mat-icon>meeting_room</mat-icon>
+        <span>In-Room</span>
+      </button>
+      <button class="gui-btn" (click)="goToControl()">
+        <mat-icon>settings</mat-icon>
+        <span>Advanced</span>
+      </button>
+    </div>
+  </div>
+}

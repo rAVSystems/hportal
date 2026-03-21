@@ -239,10 +239,11 @@ mat-form-field{
 }
 
 
-/* Vertically center form fields inside the value column */
-.config-table td:nth-child(2) {
+/* Vertically center form fields inside the params column (3rd col now, after drag handle) */
+.config-table td:nth-child(3) {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
 }
 
 /* Allow parameter controls to wrap nicely */
@@ -287,16 +288,16 @@ mat-form-field{
   appearance: auto;
 }
 
-/* Action column should be wide enough for action names */
-.config-table th:first-child,
-.config-table td:first-child {
+/* Action column should be wide enough for action names (2nd col now, after drag handle) */
+.config-table th:nth-child(2),
+.config-table td:nth-child(2) {
   width: 260px;
   min-width: 220px;
   padding-right: 20px;
 }
 
 /* Ensure the action dropdown fills the column */
-.config-table td:first-child select {
+.config-table td:nth-child(2) select {
   width: 100%;
   min-width: 220px;
 }
@@ -317,4 +318,232 @@ mat-form-field{
 
 .config-table tr:hover td {
   background-color: rgba(0,0,0,0.02);
+}
+
+.action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-row-div {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.action-drag-handle {
+  display: flex;
+  align-items: center;
+  padding-top: 22px;
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.drag-handle-icon {
+  color: #aaa;
+  font-size: 20px;
+}
+
+.action-type-field {
+  flex: 0 0 200px;
+}
+
+.action-params {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex: 1;
+
+  .table-param-field {
+    width: auto;
+    flex: 0 0 auto;
+
+    input, select {
+      width: 160px;
+      max-width: 160px;
+    }
+  }
+}
+
+.action-add-row {
+  margin-top: 8px;
+}
+
+.cdk-drag-preview {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  opacity: 0.95;
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.3;
+  background: #e8f0fe;
+  border-radius: 8px;
+  min-height: 60px;
+}
+
+.cdk-drag-animating {
+  transition: transform 200ms ease;
+}
+
+/* ── Device table ── */
+.device-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.device-summary-row {
+  cursor: pointer;
+
+  td {
+    padding: 10px 12px;
+    vertical-align: middle;
+  }
+
+  td:nth-child(2) {
+    display: table-cell;
+  }
+
+  .inline-input,
+  .inline-select {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+.expand-cell {
+  width: 36px;
+  color: #888;
+}
+
+.inline-input {
+  height: 34px;
+  padding: 4px 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  width: 100%;
+
+  &.full { width: 100%; }
+}
+
+.inline-select {
+  height: 34px;
+  padding: 4px 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  width: 100%;
+  appearance: auto;
+}
+
+.device-detail-row td {
+  background: #f9fafc;
+  padding: 0;
+  border-bottom: 2px solid #ddd;
+}
+
+.device-detail {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.device-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  padding-top: 4px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  text-transform: none;
+  font-weight: normal;
+  letter-spacing: normal;
+}
+
+.io-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.io-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.io-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.io-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th {
+    text-align: left;
+    padding: 4px 8px;
+    font-weight: 600;
+    border-bottom: 1px solid #ddd;
+    color: #666;
+  }
+
+  td {
+    padding: 4px 8px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+
+    &:nth-child(2) {
+      display: table-cell;
+    }
+  }
 }

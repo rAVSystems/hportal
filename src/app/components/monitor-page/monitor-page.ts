@@ -51,6 +51,7 @@ export class MonitorPage implements OnInit {
 
   // Search + filters
   searchText = signal('');
+  filtersOpen = signal(false);
   campusFilter = signal('');
   buildingFilter = signal('');
   roomTypeFilter = signal('');

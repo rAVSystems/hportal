@@ -16,6 +16,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 
 type ActionType =
   | 'TurnOn'
@@ -63,6 +64,7 @@ type FieldSpec = {
     MatInputModule,
     MatSelectModule,
     MatIconModule,
+    DragDropModule,
   ],
   templateUrl: './new-room.html',
   styleUrl: './new-room.scss',
@@ -94,6 +96,44 @@ export class NewRoom {
 
   selectedDevices = signal<Record<string, string>>({});
   expandedDevices = signal<Set<number>>(new Set());
+  expandedGains = signal<Set<number>>(new Set());
+
+  get gains(): FormArray { return this.form.get('Gains') as FormArray; }
+  get gainControls(): FormGroup[] { return this.gains.controls as FormGroup[]; }
+
+  private syncCtxGains(): void {
+    const gainIds = this.gainControls.map(g => g.get('key')?.value ?? '').filter(Boolean);
+    this.ctx.update(c => ({ ...c, gainIds }));
+  }
+
+  private buildGainGroup(key: string = '', g: any = {}): FormGroup {
+    return this.fb.group({
+      key: [key],
+      Label: [g.Label ?? ''],
+      ControlId: [g.ControlId ?? null],
+      IsInvisible: [g.IsInvisible ?? false],
+      Min: [g.Min ?? -50],
+      Max: [g.Max ?? -10],
+      MuteLabel: [g.MuteLabel ?? 'Mute'],
+      MuteActiveLabel: [g.MuteActiveLabel ?? 'Muted'],
+      SliderStyle: [g.SliderStyle ?? ''],
+      MuteStyle: [g.MuteStyle ?? ''],
+      MuteActiveStyle: [g.MuteActiveStyle ?? ''],
+    });
+  }
+
+  addGain(): void { this.gains.push(this.buildGainGroup()); }
+
+  removeGain(index: number): void {
+    this.gains.removeAt(index);
+    this.expandedGains.update(s => { const n = new Set(s); n.delete(index); return n; });
+  }
+
+  toggleGainExpand(index: number): void {
+    this.expandedGains.update(s => { const n = new Set(s); n.has(index) ? n.delete(index) : n.add(index); return n; });
+  }
+
+  isGainExpanded(index: number): boolean { return this.expandedGains().has(index); }
 
   readonly interfaceOptions = ['switcher', 'display', 'encoder', 'decoder', 'camera', 'capture', 'wireless', 'network'];
   readonly controlTypeOptions = ['ip', 'qsys', 'rs232', 'cec'];
@@ -273,9 +313,11 @@ export class NewRoom {
       SystemOffActions: this.fb.array([]),
       Sources: this.fb.array([]),
       Devices: this.fb.array([]),
+      Gains: this.fb.array([]),
     });
 
     this.devices.valueChanges.subscribe(() => this.syncCtxDevices());
+    this.gains.valueChanges.subscribe(() => this.syncCtxGains());
   }
 
   private syncCtxDevices(): void {
@@ -377,10 +419,14 @@ export class NewRoom {
     this.systemOffActions.removeAt(index);
   }
 
-  get devices(): FormArray {
-    return this.form.get('Devices') as FormArray;
+  dropAction(arr: FormArray, event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const control = arr.at(event.previousIndex);
+    arr.removeAt(event.previousIndex, { emitEvent: false });
+    arr.insert(event.currentIndex, control, { emitEvent: false });
   }
 
+  get devices(): FormArray { return this.form.get('Devices') as FormArray; }
   get deviceControls(): FormGroup[] {
     return this.devices.controls as FormGroup[];
   }
@@ -489,10 +535,24 @@ export class NewRoom {
         ...(row?.params ?? {}),
       }));
 
+    const devicesObject = (Array.isArray(raw.Devices) ? raw.Devices : []).reduce((acc: any, d: any) => {
+      const key = d.key; if (!key) return acc;
+      const { key: _, Interfaces, ...rest } = d;
+      acc[key] = { ...rest, Interfaces: Object.entries(Interfaces ?? {}).filter(([, v]) => v).map(([k]) => k) };
+      return acc;
+    }, {});
+
+    const gainsObject = (Array.isArray(raw.Gains) ? raw.Gains : []).reduce((acc: any, g: any) => {
+      const key = g.key; if (!key) return acc;
+      const { key: _, ...rest } = g; acc[key] = rest; return acc;
+    }, {});
+
     const configToSave = {
       ...raw,
       SystemOnActions: flattenActions(raw.SystemOnActions),
       SystemOffActions: flattenActions(raw.SystemOffActions),
+      Devices: devicesObject,
+      Gains: gainsObject,
     };
 
     const apiBase = (window as any).API_BASE_URL || 'http://192.168.1.225:8080';
@@ -563,11 +623,13 @@ export class NewRoom {
 
         this.devices.clear();
         this.expandedDevices.set(new Set());
-        const devicesMap: Record<string, any> = config.Devices ?? {};
-        Object.entries(devicesMap).forEach(([key, d]) => {
-          this.devices.push(this.buildDeviceGroup(key, d));
-        });
+        Object.entries(config.Devices ?? {}).forEach(([key, d]) => this.devices.push(this.buildDeviceGroup(key, d)));
         this.syncCtxDevices();
+
+        this.gains.clear();
+        this.expandedGains.set(new Set());
+        Object.entries(config.Gains ?? {}).forEach(([key, g]) => this.gains.push(this.buildGainGroup(key, g)));
+        this.syncCtxGains();
       },
     });
   }

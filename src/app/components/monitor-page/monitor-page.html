@@ -1,75 +1,83 @@
 
 <div class="monitor-page">
-  <div class="toolbar">
-    <div class="search-wrap">
-      <mat-form-field class="search" appearance="outline">
-        <mat-label>Search rooms</mat-label>
-        <input
-          matInput
-          type="text"
-          placeholder="Campus, building, room, IP…"
-          [ngModel]="searchText()"
-          (ngModelChange)="searchText.set($event)"
-        />
-        <button
-          mat-icon-button
-          matSuffix
-          aria-label="Clear search"
-          *ngIf="searchText()"
-          (click)="searchText.set('')"
-        >
-          <mat-icon>close</mat-icon>
-        </button>
-      </mat-form-field>
+  <div class="toolbar-wrapper">
+    <div class="toolbar" [class.open]="filtersOpen()">
+      <div class="search-wrap">
+        <mat-form-field class="search" appearance="outline">
+          <mat-label>Search rooms</mat-label>
+          <input
+            matInput
+            type="text"
+            placeholder="Campus, building, room, IP…"
+            [ngModel]="searchText()"
+            (ngModelChange)="searchText.set($event)"
+          />
+          <button
+            mat-icon-button
+            matSuffix
+            aria-label="Clear search"
+            *ngIf="searchText()"
+            (click)="searchText.set('')"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </mat-form-field>
+      </div>
+
+      <div class="filters">
+        <mat-form-field appearance="outline">
+          <mat-label>Campus</mat-label>
+          <mat-select
+            [ngModel]="campusFilter()"
+            (ngModelChange)="campusFilter.set($event)"
+          >
+            <mat-option value="">All</mat-option>
+            @for (c of campuses(); track c) {
+              <mat-option [value]="c">{{ c }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Building</mat-label>
+          <mat-select
+            [ngModel]="buildingFilter()"
+            (ngModelChange)="buildingFilter.set($event)"
+          >
+            <mat-option value="">All</mat-option>
+            @for (b of buildings(); track b) {
+              <mat-option [value]="b">{{ b }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Room Type</mat-label>
+          <mat-select
+            [ngModel]="roomTypeFilter()"
+            (ngModelChange)="roomTypeFilter.set($event)"
+          >
+            <mat-option value="">All</mat-option>
+            @for (t of roomTypes(); track t) {
+              <mat-option [value]="t">{{ t }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
     </div>
 
-    <div class="filters">
-      <mat-form-field appearance="outline">
-        <mat-label>Campus</mat-label>
-        <mat-select
-          [ngModel]="campusFilter()"
-          (ngModelChange)="campusFilter.set($event)"
-        >
-          <mat-option value="">All</mat-option>
-          @for (c of campuses(); track c) {
-            <mat-option [value]="c">{{ c }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>Building</mat-label>
-        <mat-select
-          [ngModel]="buildingFilter()"
-          (ngModelChange)="buildingFilter.set($event)"
-        >
-          <mat-option value="">All</mat-option>
-          @for (b of buildings(); track b) {
-            <mat-option [value]="b">{{ b }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>Room Type</mat-label>
-        <mat-select
-          [ngModel]="roomTypeFilter()"
-          (ngModelChange)="roomTypeFilter.set($event)"
-        >
-          <mat-option value="">All</mat-option>
-          @for (t of roomTypes(); track t) {
-            <mat-option [value]="t">{{ t }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-    </div>
-
+    <button class="filter-tab" (click)="filtersOpen.set(!filtersOpen())">
+      <mat-icon>{{ filtersOpen() ? 'expand_less' : 'search' }}</mat-icon>
+      <span>{{ filtersOpen() ? 'Hide' : 'Search & Filter' }}</span>
+    </button>
   </div>
 
   <div class="room-grid">
     <div class="dashboard-header">
       <h2>Dashboard</h2>
-      <button mat-flat-button color="primary" (click)="goToNewRoom()">New Room</button>
+      <button mat-flat-button color="primary" (click)="goToNewRoom()">
+        New Room <mat-icon>add</mat-icon>
+      </button>
     </div>
     @for (room of filteredRooms(); track room._id) {
       <app-room-card class="room-card" [room]="room" />

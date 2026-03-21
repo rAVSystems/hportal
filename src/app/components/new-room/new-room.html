@@ -111,126 +111,98 @@
 
                 <div class="form-section" id="section-system-on">
                     <h2 class="section-title">System On Actions</h2>
-                    <table class="config-table">
-                        <thead>
-                            <tr>
-                                <th>Action</th>
-                                <th>Parameters</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody formArrayName="SystemOnActions">
-                            @for (a of systemOnActionControls; track $index; let i = $index) {
-                                <tr [formGroupName]="i">
-                                    <td>
+                    <div class="action-list" formArrayName="SystemOnActions" cdkDropList (cdkDropListDropped)="dropAction(systemOnActions, $event)">
+                        @for (a of systemOnActionControls; track a; let i = $index) {
+                            <div class="action-row-div" [formGroupName]="i" cdkDrag>
+                                <div class="action-drag-handle" cdkDragHandle>
+                                    <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                </div>
+                                <div class="table-param-field action-type-field">
+                                    <label>Action</label>
+                                    <select formControlName="action">
+                                        @for (opt of actionTypes(); track opt) {
+                                            <option [value]="opt">{{ opt }}</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="action-params" formGroupName="params">
+                                    @for (field of getFieldSpecsFor(systemOnActions, i); track field.key) {
                                         <div class="table-param-field">
-                                            <label>Action</label>
-                                            <select formControlName="action">
-                                                @for (opt of actionTypes(); track opt) {
-                                                    <option [value]="opt">{{ opt }}</option>
-                                                }
-                                            </select>
-                                        </div>
-                                    </td>
-                                    <td formGroupName="params">
-                                        <div class="table-param-list">
-                                            @for (field of getFieldSpecsFor(systemOnActions, i); track field.key) {
-                                                <div class="table-param-field">
-                                                    <label>{{ field.label }}</label>
-                                                    @if (field.kind === 'select') {
-                                                        <select [formControlName]="field.key"
-                                                            (change)="field.key === 'device' ? onDeviceChange('SystemOnActions', i, $any($event.target).value) : null">
-                                                            @for (opt of getOptionsForField(field, 'SystemOnActions', systemOnActions, i); track opt.value) {
-                                                                <option [value]="opt.value">{{ opt.label }}</option>
-                                                            }
-                                                        </select>
+                                            <label>{{ field.label }}</label>
+                                            @if (field.kind === 'select') {
+                                                <select [formControlName]="field.key"
+                                                    (change)="field.key === 'device' ? onDeviceChange('SystemOnActions', i, $any($event.target).value) : null">
+                                                    @for (opt of getOptionsForField(field, 'SystemOnActions', systemOnActions, i); track opt.value) {
+                                                        <option [value]="opt.value">{{ opt.label }}</option>
                                                     }
-                                                    @if (field.kind === 'text') {
-                                                        <input type="text" [formControlName]="field.key" />
-                                                    }
-                                                    @if (field.kind === 'number') {
-                                                        <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" />
-                                                    }
-                                                </div>
+                                                </select>
+                                            }
+                                            @if (field.kind === 'text') {
+                                                <input type="text" [formControlName]="field.key" />
+                                            }
+                                            @if (field.kind === 'number') {
+                                                <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" />
                                             }
                                         </div>
-                                    </td>
-                                    <td>
-                                        <button mat-icon-button type="button" (click)="removeSystemOnAction(i)">
-                                            <mat-icon>delete</mat-icon>
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
-                            <tr class="table-add-row">
-                                <td colspan="3">
-                                    <button mat-stroked-button type="button" (click)="addSystemOnAction()">Add Action</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                    }
+                                </div>
+                                <button mat-icon-button type="button" (click)="removeSystemOnAction(i)">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                    <div class="action-add-row">
+                        <button mat-stroked-button type="button" (click)="addSystemOnAction()">Add Action</button>
+                    </div>
                 </div>
 
                 <div class="form-section" id="section-system-off">
                     <h2 class="section-title">System Off Actions</h2>
-                    <table class="config-table">
-                        <thead>
-                            <tr>
-                                <th>Action</th>
-                                <th>Parameters</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody formArrayName="SystemOffActions">
-                            @for (a of systemOffActionControls; track $index; let i = $index) {
-                                <tr [formGroupName]="i">
-                                    <td>
+                    <div class="action-list" formArrayName="SystemOffActions" cdkDropList (cdkDropListDropped)="dropAction(systemOffActions, $event)">
+                        @for (a of systemOffActionControls; track a; let i = $index) {
+                            <div class="action-row-div" [formGroupName]="i" cdkDrag>
+                                <div class="action-drag-handle" cdkDragHandle>
+                                    <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                </div>
+                                <div class="table-param-field action-type-field">
+                                    <label>Action</label>
+                                    <select formControlName="action">
+                                        @for (opt of actionTypes(); track opt) {
+                                            <option [value]="opt">{{ opt }}</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="action-params" formGroupName="params">
+                                    @for (field of getFieldSpecsFor(systemOffActions, i); track field.key) {
                                         <div class="table-param-field">
-                                            <label>Action</label>
-                                            <select formControlName="action">
-                                                @for (opt of actionTypes(); track opt) {
-                                                    <option [value]="opt">{{ opt }}</option>
-                                                }
-                                            </select>
-                                        </div>
-                                    </td>
-                                    <td formGroupName="params">
-                                        <div class="table-param-list">
-                                            @for (field of getFieldSpecsFor(systemOffActions, i); track field.key) {
-                                                <div class="table-param-field">
-                                                    <label>{{ field.label }}</label>
-                                                    @if (field.kind === 'select') {
-                                                        <select [formControlName]="field.key"
-                                                            (change)="field.key === 'device' ? onDeviceChange('SystemOffActions', i, $any($event.target).value) : null">
-                                                            @for (opt of getOptionsForField(field, 'SystemOffActions', systemOffActions, i); track opt.value) {
-                                                                <option [value]="opt.value">{{ opt.label }}</option>
-                                                            }
-                                                        </select>
+                                            <label>{{ field.label }}</label>
+                                            @if (field.kind === 'select') {
+                                                <select [formControlName]="field.key"
+                                                    (change)="field.key === 'device' ? onDeviceChange('SystemOffActions', i, $any($event.target).value) : null">
+                                                    @for (opt of getOptionsForField(field, 'SystemOffActions', systemOffActions, i); track opt.value) {
+                                                        <option [value]="opt.value">{{ opt.label }}</option>
                                                     }
-                                                    @if (field.kind === 'text') {
-                                                        <input type="text" [formControlName]="field.key" />
-                                                    }
-                                                    @if (field.kind === 'number') {
-                                                        <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" />
-                                                    }
-                                                </div>
+                                                </select>
+                                            }
+                                            @if (field.kind === 'text') {
+                                                <input type="text" [formControlName]="field.key" />
+                                            }
+                                            @if (field.kind === 'number') {
+                                                <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" />
                                             }
                                         </div>
-                                    </td>
-                                    <td>
-                                        <button mat-icon-button type="button" (click)="removeSystemOffAction(i)">
-                                            <mat-icon>delete</mat-icon>
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
-                            <tr class="table-add-row">
-                                <td colspan="3">
-                                    <button mat-stroked-button type="button" (click)="addSystemOffAction()">Add Action</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                    }
+                                </div>
+                                <button mat-icon-button type="button" (click)="removeSystemOffAction(i)">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                    <div class="action-add-row">
+                        <button mat-stroked-button type="button" (click)="addSystemOffAction()">Add Action</button>
+                    </div>
                 </div>
 
                 <div class="form-section" id="section-sources">
@@ -257,19 +229,85 @@
 
                 <div class="form-section" id="section-audio">
                     <h2 class="section-title">Audio Settings</h2>
-                    <table class="config-table">
+                    <table class="config-table device-table" formArrayName="Gains">
+                        <colgroup>
+                            <col style="width: 40px" />
+                            <col style="width: 14%" />
+                            <col style="width: 18%" />
+                            <col style="width: 10%" />
+                            <col style="width: 10%" />
+                            <col style="width: 18%" />
+                            <col style="width: 10%" />
+                            <col style="width: 40px" />
+                        </colgroup>
                         <thead>
                             <tr>
-                                <th>Device</th>
-                                <th>Type</th>
-                                <th>Default Level</th>
+                                <th></th>
+                                <th>Key</th>
+                                <th>Label</th>
+                                <th>Min (dB)</th>
+                                <th>Max (dB)</th>
+                                <th>Control ID</th>
+                                <th>Invisible</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody>
+                            @for (gain of gainControls; track $index; let gi = $index) {
+                                <ng-container [formGroupName]="gi">
+                                    <tr class="device-summary-row" (click)="toggleGainExpand(gi)">
+                                        <td class="expand-cell">
+                                            <mat-icon>{{ isGainExpanded(gi) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                                        </td>
+                                        <td><input class="inline-input" formControlName="key" (click)="$event.stopPropagation()" placeholder="e.g. ProgGain" /></td>
+                                        <td><input class="inline-input" formControlName="Label" (click)="$event.stopPropagation()" placeholder="Label" /></td>
+                                        <td><input class="inline-input" type="number" formControlName="Min" (click)="$event.stopPropagation()" placeholder="-100" /></td>
+                                        <td><input class="inline-input" type="number" formControlName="Max" (click)="$event.stopPropagation()" placeholder="20" /></td>
+                                        <td><input class="inline-input" formControlName="ControlId" (click)="$event.stopPropagation()" placeholder="Control ID" /></td>
+                                        <td>
+                                            <input type="checkbox" formControlName="IsInvisible" (click)="$event.stopPropagation()" />
+                                        </td>
+                                        <td>
+                                            <button mat-icon-button type="button" (click)="$event.stopPropagation(); removeGain(gi)">
+                                                <mat-icon>delete</mat-icon>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    @if (isGainExpanded(gi)) {
+                                        <tr class="device-detail-row">
+                                            <td colspan="8">
+                                                <div class="device-detail">
+                                                    <div class="device-detail-grid">
+                                                        <div class="detail-field">
+                                                            <label>Mute Label</label>
+                                                            <input class="inline-input full" formControlName="MuteLabel" placeholder="Mute" />
+                                                        </div>
+                                                        <div class="detail-field">
+                                                            <label>Mute Active Label</label>
+                                                            <input class="inline-input full" formControlName="MuteActiveLabel" placeholder="Unmute" />
+                                                        </div>
+                                                        <div class="detail-field">
+                                                            <label>Slider Style</label>
+                                                            <input class="inline-input full" formControlName="SliderStyle" placeholder="Style" />
+                                                        </div>
+                                                        <div class="detail-field">
+                                                            <label>Mute Style</label>
+                                                            <input class="inline-input full" formControlName="MuteStyle" placeholder="Style" />
+                                                        </div>
+                                                        <div class="detail-field">
+                                                            <label>Mute Active Style</label>
+                                                            <input class="inline-input full" formControlName="MuteActiveStyle" placeholder="Style" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </ng-container>
+                            }
                             <tr class="table-add-row">
-                                <td colspan="4">
-                                    <button mat-stroked-button type="button">Add Audio Device</button>
+                                <td colspan="8">
+                                    <button mat-stroked-button type="button" (click)="addGain()">Add Gain</button>
                                 </td>
                             </tr>
                         </tbody>

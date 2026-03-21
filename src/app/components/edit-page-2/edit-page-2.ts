@@ -19,6 +19,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { finalize } from 'rxjs/operators';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 
 type RoomConfigDoc = {
   _id: string;
@@ -73,7 +74,8 @@ type FieldSpec = {
     MatIconModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    MatCheckboxModule,],
+    MatCheckboxModule,
+    DragDropModule,],
   templateUrl: './edit-page-2.html',
   styleUrl: './edit-page-2.scss',
 })
@@ -336,8 +338,148 @@ export class EditPage2 {
       SystemOnActions: this.fb.array([]),
       SystemOffActions: this.fb.array([]),
       Sources: this.fb.array([]),
+      Devices: this.fb.array([]),
+      Gains: this.fb.array([]),
+    });
+
+    this.devices.valueChanges.subscribe(() => this.syncCtxDevices());
+    this.gains.valueChanges.subscribe(() => this.syncCtxGains());
+  }
+
+  private syncCtxDevices(): void {
+    const allDevices = this.deviceControls.map((g) => {
+      const ifaces = g.get('Interfaces')?.value ?? {};
+      return {
+        id: g.get('key')?.value ?? '',
+        friendlyName: g.get('FriendlyName')?.value ?? '',
+        interfaces: Object.entries(ifaces).filter(([, v]) => v).map(([k]) => k),
+        inputs: (g.get('Inputs') as FormArray)?.controls.map((c) => ({
+          Name: (c as FormGroup).get('Name')?.value ?? '',
+          Value: (c as FormGroup).get('Value')?.value ?? '',
+        })) ?? [],
+        outputs: (g.get('Outputs') as FormArray)?.controls.map((c) => ({
+          Name: (c as FormGroup).get('Name')?.value ?? '',
+          Value: (c as FormGroup).get('Value')?.value ?? '',
+        })) ?? [],
+      };
+    });
+    this.ctx.update(c => ({ ...c, allDevices }));
+  }
+  readonly interfaceOptions = ['switcher', 'display', 'encoder', 'decoder', 'camera', 'capture', 'wireless', 'network'];
+  readonly controlTypeOptions = ['ip', 'qsys', 'rs232', 'cec'];
+  expandedDevices = signal<Set<number>>(new Set());
+  expandedGains = signal<Set<number>>(new Set());
+
+  get devices(): FormArray {
+    return this.form.get('Devices') as FormArray;
+  }
+
+  get deviceControls(): FormGroup[] {
+    return this.devices.controls as FormGroup[];
+  }
+
+  private buildDeviceGroup(key: string = '', d: any = {}): FormGroup {
+    return this.fb.group({
+      key: [key],
+      FriendlyName: [d.FriendlyName ?? ''],
+      Make: [d.Make ?? ''],
+      Model: [d.Model ?? ''],
+      IpAddress: [d.IpAddress ?? ''],
+      Description: [d.Description ?? ''],
+      DefaultInput: [d.DefaultInput ?? null],
+      Username: [d.Username ?? ''],
+      Password: [d.Password ?? ''],
+      ControlType: [d.ControlType ?? 'ip'],
+      Interfaces: this.fb.group(
+        Object.fromEntries(this.interfaceOptions.map(i => [i, [(d.Interfaces ?? []).includes(i)]]))
+      ),
+      Inputs: this.fb.array((d.Inputs ?? []).map((inp: any) => this.fb.group({ Name: [inp.Name ?? ''], Value: [inp.Value ?? ''] }))),
+      Outputs: this.fb.array((d.Outputs ?? []).map((out: any) => this.fb.group({ Name: [out.Name ?? ''], Value: [out.Value ?? ''] }))),
     });
   }
+
+  addDevice(): void {
+    this.devices.push(this.buildDeviceGroup());
+  }
+
+  removeDevice(index: number): void {
+    this.devices.removeAt(index);
+    this.expandedDevices.update(s => { const n = new Set(s); n.delete(index); return n; });
+  }
+
+  toggleDeviceExpand(index: number): void {
+    this.expandedDevices.update(s => {
+      const n = new Set(s);
+      n.has(index) ? n.delete(index) : n.add(index);
+      return n;
+    });
+  }
+
+  isDeviceExpanded(index: number): boolean {
+    return this.expandedDevices().has(index);
+  }
+
+  getInputsArray(deviceIndex: number): FormArray {
+    return this.deviceControls[deviceIndex].get('Inputs') as FormArray;
+  }
+
+  getOutputsArray(deviceIndex: number): FormArray {
+    return this.deviceControls[deviceIndex].get('Outputs') as FormArray;
+  }
+
+  addInput(deviceIndex: number): void {
+    this.getInputsArray(deviceIndex).push(this.fb.group({ Name: [''], Value: [''] }));
+  }
+
+  removeInput(deviceIndex: number, inputIndex: number): void {
+    this.getInputsArray(deviceIndex).removeAt(inputIndex);
+  }
+
+  addOutput(deviceIndex: number): void {
+    this.getOutputsArray(deviceIndex).push(this.fb.group({ Name: [''], Value: [''] }));
+  }
+
+  removeOutput(deviceIndex: number, outputIndex: number): void {
+    this.getOutputsArray(deviceIndex).removeAt(outputIndex);
+  }
+
+  get gains(): FormArray { return this.form.get('Gains') as FormArray; }
+  get gainControls(): FormGroup[] { return this.gains.controls as FormGroup[]; }
+
+  private syncCtxGains(): void {
+    const gainIds = this.gainControls.map(g => g.get('key')?.value ?? '').filter(Boolean);
+    this.ctx.update(c => ({ ...c, gainIds }));
+  }
+
+  private buildGainGroup(key: string = '', g: any = {}): FormGroup {
+    return this.fb.group({
+      key: [key],
+      Label: [g.Label ?? ''],
+      ControlId: [g.ControlId ?? null],
+      IsInvisible: [g.IsInvisible ?? false],
+      Min: [g.Min ?? -50],
+      Max: [g.Max ?? -10],
+      MuteLabel: [g.MuteLabel ?? 'Mute'],
+      MuteActiveLabel: [g.MuteActiveLabel ?? 'Muted'],
+      SliderStyle: [g.SliderStyle ?? ''],
+      MuteStyle: [g.MuteStyle ?? ''],
+      MuteActiveStyle: [g.MuteActiveStyle ?? ''],
+    });
+  }
+
+  addGain(): void { this.gains.push(this.buildGainGroup()); }
+
+  removeGain(index: number): void {
+    this.gains.removeAt(index);
+    this.expandedGains.update(s => { const n = new Set(s); n.delete(index); return n; });
+  }
+
+  toggleGainExpand(index: number): void {
+    this.expandedGains.update(s => { const n = new Set(s); n.has(index) ? n.delete(index) : n.add(index); return n; });
+  }
+
+  isGainExpanded(index: number): boolean { return this.expandedGains().has(index); }
+
   ngOnInit(): void {
       const id = this.route.snapshot.paramMap.get('id');
       if (!id) {
@@ -463,11 +605,23 @@ export class EditPage2 {
       // Rebuild Sources (object → FormArray)
       this.sources.clear();
       const sourcesObj = cfg?.Sources ?? {};
-  
       Object.keys(sourcesObj).forEach((key) => {
         this.sources.push(this.createSourceGroup(key, sourcesObj[key]));
       });
-  
+
+      // Rebuild Devices (object → FormArray)
+      this.devices.clear();
+      const devicesObj = cfg?.Devices ?? {};
+      Object.keys(devicesObj).forEach((key) => {
+        this.devices.push(this.buildDeviceGroup(key, devicesObj[key]));
+      });
+
+      // Rebuild Gains (object → FormArray)
+      this.gains.clear();
+      const gainsObj = cfg?.Gains ?? {};
+      Object.keys(gainsObj).forEach((key) => {
+        this.gains.push(this.buildGainGroup(key, gainsObj[key]));
+      });
     }
   
     private resetActionsArray(arr: FormArray, values: any): void {
@@ -706,7 +860,14 @@ export class EditPage2 {
     removeSystemOffAction(index: number): void {
       this.systemOffActions.removeAt(index);
     }
-  
+
+    dropAction(arr: FormArray, event: CdkDragDrop<any[]>): void {
+      if (event.previousIndex === event.currentIndex) return;
+      const control = arr.at(event.previousIndex);
+      arr.removeAt(event.previousIndex, { emitEvent: false });
+      arr.insert(event.currentIndex, control, { emitEvent: false });
+    }
+
     scrollTo(id: string): void {
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
     }
@@ -742,6 +903,18 @@ export class EditPage2 {
         return acc;
       }, {});
   
+      const devicesArray = Array.isArray(raw.Devices) ? raw.Devices : [];
+      const devicesObject = devicesArray.reduce((acc: any, d: any) => {
+        const key = d.key;
+        if (!key) return acc;
+        const { key: _, Interfaces, ...rest } = d;
+        const ifaceList = Object.entries(Interfaces ?? {})
+          .filter(([, v]) => v)
+          .map(([k]) => k);
+        acc[key] = { ...rest, Interfaces: ifaceList };
+        return acc;
+      }, {});
+
       const configToSave = {
         ...raw,
         roomId: this.roomId,
@@ -750,6 +923,12 @@ export class EditPage2 {
         SystemOnActions: flattenActions(raw.SystemOnActions),
         SystemOffActions: flattenActions(raw.SystemOffActions),
         Sources: sourcesObject,
+        Devices: devicesObject,
+        Gains: (Array.isArray(raw.Gains) ? raw.Gains : []).reduce((acc: any, g: any) => {
+          const key = g.key; if (!key) return acc;
+          const { key: _, ...rest } = g;
+          acc[key] = rest; return acc;
+        }, {}),
       };
   
       const url = `${this.apiBase()}/rooms/${this.roomId}`;

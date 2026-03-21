@@ -185,9 +185,10 @@ button {
   vertical-align: middle;
 }
 
-.config-table td:nth-child(2) {
+.config-table td:nth-child(3) {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
 }
 
 .table-param-list {
@@ -229,14 +230,14 @@ button {
   appearance: auto;
 }
 
-.config-table th:first-child,
-.config-table td:first-child {
+.config-table th:nth-child(2),
+.config-table td:nth-child(2) {
   width: 260px;
   min-width: 220px;
   padding-right: 20px;
 }
 
-.config-table td:first-child select {
+.config-table td:nth-child(2) select {
   width: 100%;
   min-width: 220px;
 }
@@ -251,6 +252,86 @@ button {
 
 .config-table tr:hover td {
   background-color: rgba(0,0,0,0.02);
+}
+
+.action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-row-div {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.action-drag-handle {
+  display: flex;
+  align-items: center;
+  padding-top: 22px;
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.drag-handle-icon {
+  color: #aaa;
+  font-size: 20px;
+}
+
+.action-type-field {
+  flex: 0 0 200px;
+}
+
+.action-params {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex: 1;
+
+  .table-param-field {
+    width: auto;
+    flex: 0 0 auto;
+
+    input, select {
+      width: 160px;
+      max-width: 160px;
+    }
+  }
+}
+
+.action-add-row {
+  margin-top: 8px;
+}
+
+.cdk-drag-preview {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  opacity: 0.95;
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.3;
+  background: #e8f0fe;
+  border-radius: 8px;
+  min-height: 60px;
+}
+
+.cdk-drag-animating {
+  transition: transform 200ms ease;
 }
 
 .modal-backdrop {

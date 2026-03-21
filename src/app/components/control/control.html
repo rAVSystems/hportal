@@ -1,0 +1,18 @@
+<div class="control-page">
+  <div class="control-header">
+    <button mat-icon-button (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <span class="control-title">{{ roomName() }} &nbsp;·&nbsp; {{ ip() }}</span>
+  </div>
+
+  <div class="iframe-wrapper">
+    <iframe
+      [src]="iframeSrc()"
+      width="1280"
+      height="800"
+      frameborder="0"
+      allow="autoplay; fullscreen"
+    ></iframe>
+  </div>
+</div>
