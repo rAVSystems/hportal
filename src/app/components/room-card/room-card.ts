@@ -52,6 +52,7 @@ export class RoomCard {
   private router = inject(Router);
 
   showGuiModal = signal(false);
+  showAdvancedPanel = signal(false);
 
   goToControl() {
     const id = this.room()._id;

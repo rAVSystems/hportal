@@ -2,7 +2,6 @@ import { Routes } from '@angular/router';
 import { LoginPage } from './components/login-page/login-page';
 import { NewUserPage } from './components/new-user-page/new-user-page';
 import { MonitorPage } from './components/monitor-page/monitor-page';
-import { EditPage } from './components/edit-page/edit-page';
 import { EditPage2 } from './components/edit-page-2/edit-page-2';
 import { NewRoom } from './components/new-room/new-room';
 import { Control } from './components/control/control';

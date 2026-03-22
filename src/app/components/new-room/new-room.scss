@@ -50,14 +50,19 @@
 
 .side-nav-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 0.5rem;
   margin-top: 1.5rem;
   padding-top: 1rem;
   border-top: 1px solid rgba(0,0,0,0.1);
 
-  button {
-    width: 100%;
+  .cancel-btn {
+    flex: 1;
+    margin: 0;
+  }
+
+  .save-btn {
+    flex: 3;
     margin: 0;
   }
 }
@@ -546,20 +551,18 @@ button {
 
 .checkbox-group {
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
   gap: 0.5rem 1.5rem;
   padding-top: 4px;
 }
 
 .checkbox-label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   font-size: 14px;
   cursor: pointer;
-  text-transform: none;
-  font-weight: normal;
-  letter-spacing: normal;
 }
 
 .io-section {
@@ -603,5 +606,33 @@ button {
     &:nth-child(2) {
       display: table-cell;
     }
+  }
+}
+
+.modal-confirm {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.modal-confirm-message {
+  font-size: 1.05rem;
+  font-weight: 500;
+  margin: 0;
+  text-align: center;
+}
+
+.modal-confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+
+  button {
+    flex: 1;
+    margin: 0;
   }
 }

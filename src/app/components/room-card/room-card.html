@@ -4,7 +4,7 @@
     <!-- Header -->
     <div class="room-card__header">
       <div class="header-text">
-        <div class="room-card__title">{{ cfg().building }} · {{ cfg().room }}</div>
+        <div class="room-card__title">{{ cfg().building }} {{ cfg().room }}</div>
         <div class="room-card__subtitle">{{ cfg().campus }} | Cambridge</div>
       </div>
       <button class="touch-btn" (click)="$event.stopPropagation(); showGuiModal.set(true)">
@@ -55,7 +55,8 @@
         </div>
       </div>
 
-      <div class="error-cell">System in standby</div>
+      <!-- <div class="error-cell">System in standby</div> -->
+      <div style="flex: 1;"></div>
 
       <div class="room-badge-row">
         <span class="room-type-badge" [ngClass]="cardTypeClasses()">{{ cfg().roomType }}</span>

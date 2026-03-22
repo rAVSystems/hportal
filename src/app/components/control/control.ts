@@ -40,4 +40,10 @@ export class Control implements OnInit {
   goBack() {
     this.router.navigate(['/monitor']);
   }
+
+  openFullscreen() {
+    const piHost = window.location.hostname;
+    const url = `http://${piHost}:${this.GUI_PORT}/?ip=${this.ip()}`;
+    window.open(url, '_blank');
+  }
 }

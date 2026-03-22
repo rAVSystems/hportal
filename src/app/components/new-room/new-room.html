@@ -45,6 +45,18 @@
   </div>
 }
 
+@if (showCancelConfirm()) {
+  <div class="modal-backdrop" (click)="showCancelConfirm.set(false)">
+    <div class="modal-confirm" (click)="$event.stopPropagation()">
+      <p class="modal-confirm-message">Unsaved changes will be lost. Continue?</p>
+      <div class="modal-confirm-actions">
+        <button mat-stroked-button type="button" (click)="showCancelConfirm.set(false)">Stay</button>
+        <button mat-flat-button color="warn" type="button" (click)="confirmCancel()">Go To Dashboard</button>
+      </div>
+    </div>
+  </div>
+}
+
 <div class="edit-page">
     <div class="side-nav-bar">
         <nav class="side-nav">
@@ -56,10 +68,10 @@
             <a class="side-nav-link" (click)="scrollTo('section-devices')">Devices</a>
         </nav>
         <div class="side-nav-actions">
-            <button mat-flat-button color="primary" type="button" (click)="onSave()" [disabled]="form.invalid || saving()">
+            <button class="cancel-btn" mat-stroked-button type="button" (click)="onCancel()">Cancel</button>
+            <button class="save-btn" mat-flat-button color="primary" type="button" (click)="onSave()" [disabled]="form.invalid || saving()">
                 @if (saving()) { Saving… } @else { Save }
             </button>
-            <button mat-stroked-button type="button" (click)="onCancel()">Cancel</button>
         </div>
     </div>
     <div class="form">
@@ -393,10 +405,7 @@
                                                         <label>Interfaces</label>
                                                         <div class="checkbox-group">
                                                             @for (iface of interfaceOptions; track iface) {
-                                                                <label class="checkbox-label">
-                                                                    <input type="checkbox" [formControlName]="iface" />
-                                                                    {{ iface }}
-                                                                </label>
+                                                                <mat-checkbox [formControlName]="iface">{{ iface }}</mat-checkbox>
                                                             }
                                                         </div>
                                                     </div>

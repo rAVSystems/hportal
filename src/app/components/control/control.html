@@ -4,6 +4,9 @@
       <mat-icon>arrow_back</mat-icon>
     </button>
     <span class="control-title">{{ roomName() }} &nbsp;·&nbsp; {{ ip() }}</span>
+    <button class="fullscreen-btn" mat-icon-button (click)="openFullscreen()" title="Open fullscreen">
+      <mat-icon>open_in_new</mat-icon>
+    </button>
   </div>
 
   <div class="iframe-wrapper">

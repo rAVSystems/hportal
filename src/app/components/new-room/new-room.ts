@@ -17,6 +17,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 type ActionType =
   | 'TurnOn'
@@ -65,6 +66,7 @@ type FieldSpec = {
     MatSelectModule,
     MatIconModule,
     DragDropModule,
+    MatCheckboxModule,
   ],
   templateUrl: './new-room.html',
   styleUrl: './new-room.scss',
@@ -73,6 +75,7 @@ export class NewRoom {
   saving = signal(false);
   errorMessage = signal<string | null>(null);
   showTemplateModal = signal(false);
+  showCancelConfirm = signal(false);
   templates = signal<{ _id: string; name: string; icon: string; createdby: string; created: string; permission: string }[]>([]);
   templatesLoading = signal(false);
   templatesError = signal<string | null>(null);
@@ -520,6 +523,10 @@ export class NewRoom {
   }
 
   onCancel(): void {
+    this.showCancelConfirm.set(true);
+  }
+
+  confirmCancel(): void {
     this.router.navigate(['/monitor']);
   }
 

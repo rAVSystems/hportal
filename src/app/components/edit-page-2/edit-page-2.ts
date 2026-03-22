@@ -18,8 +18,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { finalize } from 'rxjs/operators';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 type RoomConfigDoc = {
   _id: string;
@@ -74,8 +74,8 @@ type FieldSpec = {
     MatIconModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    MatCheckboxModule,
-    DragDropModule,],
+    DragDropModule,
+    MatCheckboxModule,],
   templateUrl: './edit-page-2.html',
   styleUrl: './edit-page-2.scss',
 })
@@ -84,6 +84,7 @@ export class EditPage2 {
   loading = signal(true);
   loadError = signal<string | null>(null);
   saving = signal(false);
+  showCancelConfirm = signal(false);
   readonly panelOpenState = signal(false);
 
   /** Route param */
@@ -873,6 +874,10 @@ export class EditPage2 {
     }
 
     onCancel(): void {
+      this.showCancelConfirm.set(true);
+    }
+
+    confirmCancel(): void {
       this.router.navigate(['/monitor']);
     }
   
