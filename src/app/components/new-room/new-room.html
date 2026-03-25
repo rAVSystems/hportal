@@ -64,6 +64,8 @@
             <a class="side-nav-link" (click)="scrollTo('section-system-on')">System On Actions</a>
             <a class="side-nav-link" (click)="scrollTo('section-system-off')">System Off Actions</a>
             <a class="side-nav-link" (click)="scrollTo('section-sources')">Sources</a>
+            <a class="side-nav-link" (click)="scrollTo('section-components')">Components</a>
+            <a class="side-nav-link" (click)="scrollTo('section-pages')">Pages</a>
             <a class="side-nav-link" (click)="scrollTo('section-audio')">Audio Settings</a>
             <a class="side-nav-link" (click)="scrollTo('section-devices')">Devices</a>
         </nav>
@@ -219,246 +221,506 @@
 
                 <div class="form-section" id="section-sources">
                     <h2 class="section-title">Source Settings</h2>
-                    <table class="config-table">
-                        <thead>
-                            <tr>
-                                <th>Label</th>
-                                <th>Order</th>
-                                <th>Auto Start</th>
-                                <th>Actions</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="table-add-row">
-                                <td colspan="5">
-                                    <button mat-stroked-button type="button">Add Source</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+                    <div class="source-list" formArrayName="Sources" cdkDropList (cdkDropListDropped)="dropSource($event)">
+                        @for (src of sourceControls; track src; let si = $index) {
+                            <div class="source-row" [formGroupName]="si" cdkDrag>
+                                <div class="source-drag-handle" cdkDragHandle>
+                                    <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                </div>
+
+                                <div class="source-summary" (click)="toggleSourceExpand(si)">
+                                    <div class="source-summary-fields">
+                                        <div class="source-field">
+                                            <label>Label</label>
+                                            <input class="inline-input" formControlName="Label" (click)="$event.stopPropagation()" placeholder="Label" />
+                                        </div>
+                                        <div class="source-field">
+                                            <label>Key</label>
+                                            <input class="inline-input" formControlName="Key" (click)="$event.stopPropagation()" placeholder="Key" />
+                                        </div>
+                                        <div class="source-field source-field--checkbox" (click)="$event.stopPropagation()">
+                                            <label>Icon</label>
+                                            <app-icon-picker formControlName="Icon"></app-icon-picker>
+                                        </div>
+                                        <div class="source-field source-field--checkbox">
+                                            <label>Auto Start</label>
+                                            <mat-checkbox formControlName="AutoStart" (click)="$event.stopPropagation()"></mat-checkbox>
+                                        </div>
+                                        <div class="source-field source-field--checkbox">
+                                            <label>Auto Shutdown</label>
+                                            <mat-checkbox formControlName="AutoShutdown" (click)="$event.stopPropagation()"></mat-checkbox>
+                                        </div>
+                                        <div class="source-field source-field--checkbox">
+                                            <label>Invisible</label>
+                                            <mat-checkbox formControlName="IsInvisible" (click)="$event.stopPropagation()"></mat-checkbox>
+                                        </div>
+                                    </div>
+                                    <mat-icon class="source-expand-icon">{{ isSourceExpanded(si) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                                </div>
+
+                                <button mat-icon-button type="button" (click)="removeSource(si)">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+
+                                @if (isSourceExpanded(si)) {
+                                    <div class="source-detail">
+                                        <div class="device-detail-grid">
+                                            <div class="detail-field">
+                                                <label>Control</label>
+                                                <input class="inline-input" formControlName="Control" placeholder="Control key" />
+                                            </div>
+                                            <div class="detail-field detail-field--checkbox-row">
+                                                <label>Icon Selected</label>
+                                                <app-icon-picker formControlName="IconSelected"></app-icon-picker>
+                                            </div>
+                                            <div class="detail-field">
+                                                <label>Group</label>
+                                                <input class="inline-input" formControlName="Group" placeholder="Sources" />
+                                            </div>
+                                        </div>
+
+                                        <div class="detail-actions-section">
+                                            <label class="detail-actions-title">Actions</label>
+                                            <div class="action-list" [formArrayName]="'Actions'" cdkDropList (cdkDropListDropped)="dropSourceAction(si, $event)">
+                                                @for (a of getSourceActionsArray(si).controls; track a; let ai = $index) {
+                                                    <div class="action-row-div" [formGroupName]="ai" cdkDrag>
+                                                        <div class="action-drag-handle" cdkDragHandle>
+                                                            <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                                        </div>
+                                                        <div class="table-param-field action-type-field">
+                                                            <label>Action</label>
+                                                            <select formControlName="action">
+                                                                @for (opt of actionTypes(); track opt) {
+                                                                    <option [value]="opt">{{ opt }}</option>
+                                                                }
+                                                            </select>
+                                                        </div>
+                                                        <div class="action-params" formGroupName="params">
+                                                            @for (field of getSourceActionFieldSpecs(si, ai); track field.key) {
+                                                                <div class="table-param-field">
+                                                                    <label>{{ field.label }}</label>
+                                                                    @if (field.kind === 'select') {
+                                                                        <select [formControlName]="field.key">
+                                                                            @for (opt of getOptionsForField(field, 'src-' + si, getSourceActionsArray(si), ai); track opt.value) {
+                                                                                <option [value]="opt.value">{{ opt.label }}</option>
+                                                                            }
+                                                                        </select>
+                                                                    }
+                                                                    @if (field.kind === 'text') {
+                                                                        <input type="text" [formControlName]="field.key" />
+                                                                    }
+                                                                    @if (field.kind === 'number') {
+                                                                        <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" />
+                                                                    }
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                        <button mat-icon-button type="button" (click)="removeSourceAction(si, ai)">
+                                                            <mat-icon>delete</mat-icon>
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                            <div class="action-add-row">
+                                                <button mat-stroked-button type="button" (click)="addSourceAction(si)">Add Action</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="action-add-row" style="margin-top: 8px;">
+                        <button mat-stroked-button type="button" (click)="addSource()">Add Source</button>
+                    </div>
+                </div>
+
+                <!-- ── Components ──────────────────────────────────────── -->
+                <div class="form-section" id="section-components">
+                    <h2 class="section-title">Components</h2>
+                    <div class="source-list" formArrayName="Components" cdkDropList (cdkDropListDropped)="dropComponent($event)">
+                        @for (comp of componentControls; track comp; let ci = $index) {
+                            <div class="source-row" [formGroupName]="ci" cdkDrag>
+                                <div class="source-drag-handle" cdkDragHandle>
+                                    <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                </div>
+                                <div class="source-summary" (click)="toggleComponentExpand(ci)">
+                                    <div class="source-summary-fields">
+                                        <div class="source-field">
+                                            <label>Key</label>
+                                            <input class="inline-input" formControlName="Key" (click)="$event.stopPropagation()" placeholder="ComponentKey" />
+                                        </div>
+                                        <div class="source-field source-field--checkbox">
+                                            <label>Invisible</label>
+                                            <mat-checkbox formControlName="IsInvisible" (click)="$event.stopPropagation()"></mat-checkbox>
+                                        </div>
+                                    </div>
+                                    <mat-icon class="source-expand-icon">{{ isComponentExpanded(ci) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                                </div>
+                                <button mat-icon-button type="button" (click)="removeComponent(ci)">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                                @if (isComponentExpanded(ci)) {
+                                    <div class="source-detail">
+                                        <div class="detail-actions-section">
+                                            <label class="detail-actions-title">Properties</label>
+                                            <div formArrayName="Properties">
+                                                @for (prop of getComponentPropertiesArray(ci).controls; track prop; let pri = $index) {
+                                                    <div class="prop-row" [formGroupName]="pri">
+                                                        <select class="inline-select" formControlName="key" style="width: 120px;">
+                                                            <option value="">— type —</option>
+                                                            <option value="Value">Value</option>
+                                                            <option value="String">String</option>
+                                                            <option value="Boolean">Boolean</option>
+                                                            <option value="CssClass">CssClass</option>
+                                                        </select>
+                                                        <input class="inline-input" formControlName="value" placeholder="Value" style="width: 200px;" />
+                                                        <button mat-icon-button type="button" (click)="removeComponentProperty(ci, pri)">
+                                                            <mat-icon>delete</mat-icon>
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                            <div class="action-add-row">
+                                                <button mat-stroked-button type="button" (click)="addComponentProperty(ci)">Add Property</button>
+                                            </div>
+                                        </div>
+                                        <div class="detail-actions-section">
+                                            <label class="detail-actions-title">Actions</label>
+                                            <div class="action-list" [formArrayName]="'Actions'" cdkDropList (cdkDropListDropped)="dropComponentAction(ci, $event)">
+                                                @for (a of getComponentActionsArray(ci).controls; track a; let ai = $index) {
+                                                    <div class="action-row-div" [formGroupName]="ai" cdkDrag>
+                                                        <div class="action-drag-handle" cdkDragHandle>
+                                                            <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                                        </div>
+                                                        <div class="table-param-field action-type-field">
+                                                            <label>Action</label>
+                                                            <select formControlName="action">
+                                                                @for (opt of actionTypes(); track opt) {
+                                                                    <option [value]="opt">{{ opt }}</option>
+                                                                }
+                                                            </select>
+                                                        </div>
+                                                        <div class="action-params" formGroupName="params">
+                                                            @for (field of getComponentActionFieldSpecs(ci, ai); track field.key) {
+                                                                <div class="table-param-field">
+                                                                    <label>{{ field.label }}</label>
+                                                                    @if (field.kind === 'select') {
+                                                                        <select [formControlName]="field.key">
+                                                                            @for (opt of getOptionsForField(field, 'comp-' + ci, getComponentActionsArray(ci), ai); track opt.value) {
+                                                                                <option [value]="opt.value">{{ opt.label }}</option>
+                                                                            }
+                                                                        </select>
+                                                                    }
+                                                                    @if (field.kind === 'text') { <input type="text" [formControlName]="field.key" /> }
+                                                                    @if (field.kind === 'number') { <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" /> }
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                        <button mat-icon-button type="button" (click)="removeComponentAction(ci, ai)">
+                                                            <mat-icon>delete</mat-icon>
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                            <div class="action-add-row">
+                                                <button mat-stroked-button type="button" (click)="addComponentAction(ci)">Add Action</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="action-add-row" style="margin-top: 8px;">
+                        <button mat-stroked-button type="button" (click)="addComponent()">Add Component</button>
+                    </div>
+                </div>
+
+                <!-- ── Pages ──────────────────────────────────────────── -->
+                <div class="form-section" id="section-pages">
+                    <h2 class="section-title">Pages</h2>
+                    <div class="source-list" formArrayName="Pages" cdkDropList (cdkDropListDropped)="dropPage($event)">
+                        @for (pg of pageControls; track pg; let pi = $index) {
+                            <div class="source-row" [formGroupName]="pi" cdkDrag>
+                                <div class="source-drag-handle" cdkDragHandle>
+                                    <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                </div>
+                                <div class="source-summary" (click)="togglePageExpand(pi)">
+                                    <div class="source-summary-fields">
+                                        <div class="source-field">
+                                            <label>Id</label>
+                                            <input class="inline-input" formControlName="Id" (click)="$event.stopPropagation()" placeholder="PageId" />
+                                        </div>
+                                        <div class="source-field">
+                                            <label>Title</label>
+                                            <input class="inline-input" formControlName="Title" (click)="$event.stopPropagation()" placeholder="Title" />
+                                        </div>
+                                    </div>
+                                    <mat-icon class="source-expand-icon">{{ isPageExpanded(pi) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                                </div>
+                                <button mat-icon-button type="button" (click)="removePage(pi)">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                                @if (isPageExpanded(pi)) {
+                                    <div class="source-detail">
+                                        <div class="device-detail-grid">
+                                            <div class="detail-field">
+                                                <label>Subtitle</label>
+                                                <input class="inline-input" formControlName="Subtitle" placeholder="Subtitle" />
+                                            </div>
+                                            <div class="detail-field">
+                                                <label>Description</label>
+                                                <input class="inline-input" formControlName="Description" placeholder="Description" />
+                                            </div>
+                                            <div class="detail-field">
+                                                <label>Text</label>
+                                                <input class="inline-input" formControlName="Text" placeholder="Text" />
+                                            </div>
+                                            <div class="detail-field">
+                                                <label>Image</label>
+                                                <input class="inline-input" formControlName="Image" placeholder="CSS class or URL" />
+                                            </div>
+                                        </div>
+                                        <div class="detail-actions-section">
+                                            <label class="detail-actions-title">Actions</label>
+                                            <div class="action-list" [formArrayName]="'Actions'" cdkDropList (cdkDropListDropped)="dropPageAction(pi, $event)">
+                                                @for (a of getPageActionsArray(pi).controls; track a; let ai = $index) {
+                                                    <div class="action-row-div" [formGroupName]="ai" cdkDrag>
+                                                        <div class="action-drag-handle" cdkDragHandle>
+                                                            <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                                        </div>
+                                                        <div class="table-param-field action-type-field">
+                                                            <label>Action</label>
+                                                            <select formControlName="action">
+                                                                @for (opt of actionTypes(); track opt) {
+                                                                    <option [value]="opt">{{ opt }}</option>
+                                                                }
+                                                            </select>
+                                                        </div>
+                                                        <div class="action-params" formGroupName="params">
+                                                            @for (field of getPageActionFieldSpecs(pi, ai); track field.key) {
+                                                                <div class="table-param-field">
+                                                                    <label>{{ field.label }}</label>
+                                                                    @if (field.kind === 'select') {
+                                                                        <select [formControlName]="field.key">
+                                                                            @for (opt of getOptionsForField(field, 'pg-' + pi, getPageActionsArray(pi), ai); track opt.value) {
+                                                                                <option [value]="opt.value">{{ opt.label }}</option>
+                                                                            }
+                                                                        </select>
+                                                                    }
+                                                                    @if (field.kind === 'text') { <input type="text" [formControlName]="field.key" /> }
+                                                                    @if (field.kind === 'number') { <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" /> }
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                        <button mat-icon-button type="button" (click)="removePageAction(pi, ai)">
+                                                            <mat-icon>delete</mat-icon>
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                            <div class="action-add-row">
+                                                <button mat-stroked-button type="button" (click)="addPageAction(pi)">Add Action</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="action-add-row" style="margin-top: 8px;">
+                        <button mat-stroked-button type="button" (click)="addPage()">Add Page</button>
+                    </div>
                 </div>
 
                 <div class="form-section" id="section-audio">
                     <h2 class="section-title">Audio Settings</h2>
-                    <table class="config-table device-table" formArrayName="Gains">
-                        <colgroup>
-                            <col style="width: 40px" />
-                            <col style="width: 14%" />
-                            <col style="width: 18%" />
-                            <col style="width: 10%" />
-                            <col style="width: 10%" />
-                            <col style="width: 18%" />
-                            <col style="width: 10%" />
-                            <col style="width: 40px" />
-                        </colgroup>
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Key</th>
-                                <th>Label</th>
-                                <th>Min (dB)</th>
-                                <th>Max (dB)</th>
-                                <th>Control ID</th>
-                                <th>Invisible</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @for (gain of gainControls; track $index; let gi = $index) {
-                                <ng-container [formGroupName]="gi">
-                                    <tr class="device-summary-row" (click)="toggleGainExpand(gi)">
-                                        <td class="expand-cell">
-                                            <mat-icon>{{ isGainExpanded(gi) ? 'expand_less' : 'expand_more' }}</mat-icon>
-                                        </td>
-                                        <td><input class="inline-input" formControlName="key" (click)="$event.stopPropagation()" placeholder="e.g. ProgGain" /></td>
-                                        <td><input class="inline-input" formControlName="Label" (click)="$event.stopPropagation()" placeholder="Label" /></td>
-                                        <td><input class="inline-input" type="number" formControlName="Min" (click)="$event.stopPropagation()" placeholder="-100" /></td>
-                                        <td><input class="inline-input" type="number" formControlName="Max" (click)="$event.stopPropagation()" placeholder="20" /></td>
-                                        <td><input class="inline-input" formControlName="ControlId" (click)="$event.stopPropagation()" placeholder="Control ID" /></td>
-                                        <td>
-                                            <input type="checkbox" formControlName="IsInvisible" (click)="$event.stopPropagation()" />
-                                        </td>
-                                        <td>
-                                            <button mat-icon-button type="button" (click)="$event.stopPropagation(); removeGain(gi)">
-                                                <mat-icon>delete</mat-icon>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    @if (isGainExpanded(gi)) {
-                                        <tr class="device-detail-row">
-                                            <td colspan="8">
-                                                <div class="device-detail">
-                                                    <div class="device-detail-grid">
-                                                        <div class="detail-field">
-                                                            <label>Mute Label</label>
-                                                            <input class="inline-input full" formControlName="MuteLabel" placeholder="Mute" />
-                                                        </div>
-                                                        <div class="detail-field">
-                                                            <label>Mute Active Label</label>
-                                                            <input class="inline-input full" formControlName="MuteActiveLabel" placeholder="Unmute" />
-                                                        </div>
-                                                        <div class="detail-field">
-                                                            <label>Slider Style</label>
-                                                            <input class="inline-input full" formControlName="SliderStyle" placeholder="Style" />
-                                                        </div>
-                                                        <div class="detail-field">
-                                                            <label>Mute Style</label>
-                                                            <input class="inline-input full" formControlName="MuteStyle" placeholder="Style" />
-                                                        </div>
-                                                        <div class="detail-field">
-                                                            <label>Mute Active Style</label>
-                                                            <input class="inline-input full" formControlName="MuteActiveStyle" placeholder="Style" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    }
-                                </ng-container>
-                            }
-                            <tr class="table-add-row">
-                                <td colspan="8">
-                                    <button mat-stroked-button type="button" (click)="addGain()">Add Gain</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="source-list" formArrayName="Gains" cdkDropList (cdkDropListDropped)="dropGain($event)">
+                        @for (gain of gainControls; track gain; let gi = $index) {
+                            <div class="source-row" [formGroupName]="gi" cdkDrag>
+                                <div class="source-drag-handle" cdkDragHandle>
+                                    <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                </div>
+                                <div class="source-summary" (click)="toggleGainExpand(gi)">
+                                    <div class="source-summary-fields">
+                                        <div class="source-field">
+                                            <label>Key</label>
+                                            <input class="inline-input" formControlName="key" (click)="$event.stopPropagation()" placeholder="e.g. ProgGain" />
+                                        </div>
+                                        <div class="source-field">
+                                            <label>Label</label>
+                                            <input class="inline-input" formControlName="Label" (click)="$event.stopPropagation()" placeholder="Label" />
+                                        </div>
+                                        <div class="source-field">
+                                            <label>Min (dB)</label>
+                                            <input class="inline-input" type="number" formControlName="Min" (click)="$event.stopPropagation()" style="width: 70px;" />
+                                        </div>
+                                        <div class="source-field">
+                                            <label>Max (dB)</label>
+                                            <input class="inline-input" type="number" formControlName="Max" (click)="$event.stopPropagation()" style="width: 70px;" />
+                                        </div>
+                                        <div class="source-field">
+                                            <label>Control ID</label>
+                                            <input class="inline-input" type="number" formControlName="ControlId" (click)="$event.stopPropagation()" style="width: 80px;" />
+                                        </div>
+                                        <div class="source-field source-field--checkbox">
+                                            <label>Invisible</label>
+                                            <mat-checkbox formControlName="IsInvisible" (click)="$event.stopPropagation()"></mat-checkbox>
+                                        </div>
+                                    </div>
+                                    <mat-icon class="source-expand-icon">{{ isGainExpanded(gi) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                                </div>
+                                <button mat-icon-button type="button" (click)="removeGain(gi)">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                                @if (isGainExpanded(gi)) {
+                                    <div class="source-detail">
+                                        <div class="device-detail-grid">
+                                            <div class="detail-field">
+                                                <label>Mute Label</label>
+                                                <input class="inline-input" formControlName="MuteLabel" placeholder="Mute" />
+                                            </div>
+                                            <div class="detail-field">
+                                                <label>Mute Active Label</label>
+                                                <input class="inline-input" formControlName="MuteActiveLabel" placeholder="Muted" />
+                                            </div>
+                                            <div class="detail-field">
+                                                <label>Slider Style</label>
+                                                <input class="inline-input" formControlName="SliderStyle" placeholder="CSS class" />
+                                            </div>
+                                            <div class="detail-field">
+                                                <label>Mute Style</label>
+                                                <input class="inline-input" formControlName="MuteStyle" placeholder="CSS class" />
+                                            </div>
+                                            <div class="detail-field">
+                                                <label>Mute Active Style</label>
+                                                <input class="inline-input" formControlName="MuteActiveStyle" placeholder="CSS class" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="action-add-row" style="margin-top: 8px;">
+                        <button mat-stroked-button type="button" (click)="addGain()">Add Gain</button>
+                    </div>
                 </div>
 
                 <div class="form-section" id="section-devices">
                     <h2 class="section-title">Devices</h2>
-                    <table class="config-table device-table" formArrayName="Devices">
-                        <colgroup>
-                            <col style="width: 40px" />
-                            <col style="width: 14%" />
-                            <col style="width: 20%" />
-                            <col style="width: 14%" />
-                            <col style="width: 14%" />
-                            <col style="width: 12%" />
-                            <col style="width: 18%" />
-                            <col style="width: 40px" />
-                        </colgroup>
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Key</th>
-                                <th>Friendly Name</th>
-                                <th>Make</th>
-                                <th>Model</th>
-                                <th>Control Type</th>
-                                <th>IP Address</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @for (device of deviceControls; track $index; let di = $index) {
-                                <ng-container [formGroupName]="di">
-                                    <tr class="device-summary-row" (click)="toggleDeviceExpand(di)">
-                                        <td class="expand-cell">
-                                            <mat-icon>{{ isDeviceExpanded(di) ? 'expand_less' : 'expand_more' }}</mat-icon>
-                                        </td>
-                                        <td><input class="inline-input" formControlName="key" (click)="$event.stopPropagation()" placeholder="e.g. Proj-1" /></td>
-                                        <td><input class="inline-input" formControlName="FriendlyName" (click)="$event.stopPropagation()" placeholder="Friendly Name" /></td>
-                                        <td><input class="inline-input" formControlName="Make" (click)="$event.stopPropagation()" placeholder="Make" /></td>
-                                        <td><input class="inline-input" formControlName="Model" (click)="$event.stopPropagation()" placeholder="Model" /></td>
-                                        <td>
+                    <div class="source-list" formArrayName="Devices" cdkDropList (cdkDropListDropped)="dropDevice($event)">
+                        @for (device of deviceControls; track device; let di = $index) {
+                            <div class="source-row" [formGroupName]="di" cdkDrag>
+                                <div class="source-drag-handle" cdkDragHandle>
+                                    <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                </div>
+                                <div class="source-summary" (click)="toggleDeviceExpand(di)">
+                                    <div class="source-summary-fields">
+                                        <div class="source-field">
+                                            <label>Key</label>
+                                            <input class="inline-input" formControlName="key" (click)="$event.stopPropagation()" placeholder="e.g. Proj-1" />
+                                        </div>
+                                        <div class="source-field">
+                                            <label>Friendly Name</label>
+                                            <input class="inline-input" formControlName="FriendlyName" (click)="$event.stopPropagation()" placeholder="Friendly Name" />
+                                        </div>
+                                        <div class="source-field">
+                                            <label>Make</label>
+                                            <input class="inline-input" formControlName="Make" (click)="$event.stopPropagation()" placeholder="Make" />
+                                        </div>
+                                        <div class="source-field">
+                                            <label>Model</label>
+                                            <input class="inline-input" formControlName="Model" (click)="$event.stopPropagation()" placeholder="Model" />
+                                        </div>
+                                        <div class="source-field">
+                                            <label>Control Type</label>
                                             <select class="inline-select" formControlName="ControlType" (click)="$event.stopPropagation()">
                                                 @for (ct of controlTypeOptions; track ct) {
                                                     <option [value]="ct">{{ ct }}</option>
                                                 }
                                             </select>
-                                        </td>
-                                        <td><input class="inline-input" formControlName="IpAddress" (click)="$event.stopPropagation()" placeholder="IP Address" /></td>
-                                        <td>
-                                            <button mat-icon-button type="button" (click)="$event.stopPropagation(); removeDevice(di)">
-                                                <mat-icon>delete</mat-icon>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    @if (isDeviceExpanded(di)) {
-                                        <tr class="device-detail-row">
-                                            <td colspan="8">
-                                                <div class="device-detail">
-                                                    <div class="device-detail-grid">
-                                                        <div class="detail-field">
-                                                            <label>Description</label>
-                                                            <input class="inline-input full" formControlName="Description" placeholder="Description" />
-                                                        </div>
-                                                        @if (device.get('Interfaces')?.get('switcher')?.value) {
-                                                        <div class="detail-field">
-                                                            <label>Default Input</label>
-                                                            <input class="inline-input" type="number" formControlName="DefaultInput" placeholder="0" />
-                                                        </div>
-                                                        }
-                                                        <div class="detail-field">
-                                                            <label>Username</label>
-                                                            <input class="inline-input" formControlName="Username" placeholder="Username" />
-                                                        </div>
-                                                        <div class="detail-field">
-                                                            <label>Password</label>
-                                                            <input class="inline-input" formControlName="Password" placeholder="Password" />
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="detail-field" formGroupName="Interfaces">
-                                                        <label>Interfaces</label>
-                                                        <div class="checkbox-group">
-                                                            @for (iface of interfaceOptions; track iface) {
-                                                                <mat-checkbox [formControlName]="iface">{{ iface }}</mat-checkbox>
-                                                            }
-                                                        </div>
-                                                    </div>
-
-                                                    @if (device.get('Interfaces')?.get('switcher')?.value) {
-                                                    <div class="io-section">
-                                                        <div class="io-group">
-                                                            <label class="io-title">Inputs</label>
-                                                            <table class="io-table" formArrayName="Inputs">
-                                                                <thead><tr><th>Name</th><th>Value</th><th></th></tr></thead>
-                                                                <tbody>
-                                                                    @for (inp of getInputsArray(di).controls; track inp; let ii = $index) {
-                                                                        <tr [formGroupName]="ii">
-                                                                            <td><input class="inline-input" formControlName="Name" placeholder="Name" /></td>
-                                                                            <td><input class="inline-input" formControlName="Value" placeholder="Value" /></td>
-                                                                            <td><button mat-icon-button type="button" (click)="removeInput(di, ii)"><mat-icon>remove</mat-icon></button></td>
-                                                                        </tr>
-                                                                    }
-                                                                    <tr><td colspan="3"><button mat-stroked-button type="button" (click)="addInput(di)">Add Input</button></td></tr>
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                        <div class="io-group">
-                                                            <label class="io-title">Outputs</label>
-                                                            <table class="io-table" formArrayName="Outputs">
-                                                                <thead><tr><th>Name</th><th>Value</th><th></th></tr></thead>
-                                                                <tbody>
-                                                                    @for (out of getOutputsArray(di).controls; track out; let oi = $index) {
-                                                                        <tr [formGroupName]="oi">
-                                                                            <td><input class="inline-input" formControlName="Name" placeholder="Name" /></td>
-                                                                            <td><input class="inline-input" formControlName="Value" placeholder="Value" /></td>
-                                                                            <td><button mat-icon-button type="button" (click)="removeOutput(di, oi)"><mat-icon>remove</mat-icon></button></td>
-                                                                        </tr>
-                                                                    }
-                                                                    <tr><td colspan="3"><button mat-stroked-button type="button" (click)="addOutput(di)">Add Output</button></td></tr>
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    </div>
-                                                    }
+                                        </div>
+                                        <div class="source-field">
+                                            <label>IP Address</label>
+                                            <input class="inline-input" formControlName="IpAddress" (click)="$event.stopPropagation()" placeholder="IP Address" />
+                                        </div>
+                                    </div>
+                                    <mat-icon class="source-expand-icon">{{ isDeviceExpanded(di) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                                </div>
+                                <button mat-icon-button type="button" (click)="removeDevice(di)">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                                @if (isDeviceExpanded(di)) {
+                                    <div class="source-detail">
+                                        <div class="device-detail-grid">
+                                            <div class="detail-field">
+                                                <label>Description</label>
+                                                <input class="inline-input full" formControlName="Description" placeholder="Description" />
+                                            </div>
+                                            @if (device.get('Interfaces')?.get('switcher')?.value) {
+                                                <div class="detail-field">
+                                                    <label>Default Input</label>
+                                                    <input class="inline-input" type="number" formControlName="DefaultInput" placeholder="0" />
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    }
-                                </ng-container>
-                            }
-                            <tr class="table-add-row">
-                                <td colspan="8">
-                                    <button mat-stroked-button type="button" (click)="addDevice()">Add Device</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                            }
+                                            <div class="detail-field">
+                                                <label>Username</label>
+                                                <input class="inline-input" formControlName="Username" placeholder="Username" />
+                                            </div>
+                                            <div class="detail-field">
+                                                <label>Password</label>
+                                                <input class="inline-input" formControlName="Password" placeholder="Password" />
+                                            </div>
+                                        </div>
+                                        <div class="detail-field" formGroupName="Interfaces">
+                                            <label>Interfaces</label>
+                                            <div class="checkbox-group">
+                                                @for (iface of interfaceOptions; track iface) {
+                                                    <mat-checkbox [formControlName]="iface">{{ iface }}</mat-checkbox>
+                                                }
+                                            </div>
+                                        </div>
+                                        @if (device.get('Interfaces')?.get('switcher')?.value) {
+                                            <div class="io-section">
+                                                <div class="io-group">
+                                                    <label class="io-title">Inputs</label>
+                                                    <div formArrayName="Inputs">
+                                                        @for (inp of getInputsArray(di).controls; track inp; let ii = $index) {
+                                                            <div class="prop-row" [formGroupName]="ii">
+                                                                <input class="inline-input" formControlName="Name" placeholder="Name" style="width: 140px;" />
+                                                                <input class="inline-input" formControlName="Value" placeholder="Value" style="width: 100px;" />
+                                                                <button mat-icon-button type="button" (click)="removeInput(di, ii)"><mat-icon>remove</mat-icon></button>
+                                                            </div>
+                                                        }
+                                                        <button mat-stroked-button type="button" (click)="addInput(di)">Add Input</button>
+                                                    </div>
+                                                </div>
+                                                <div class="io-group">
+                                                    <label class="io-title">Outputs</label>
+                                                    <div formArrayName="Outputs">
+                                                        @for (out of getOutputsArray(di).controls; track out; let oi = $index) {
+                                                            <div class="prop-row" [formGroupName]="oi">
+                                                                <input class="inline-input" formControlName="Name" placeholder="Name" style="width: 140px;" />
+                                                                <input class="inline-input" formControlName="Value" placeholder="Value" style="width: 100px;" />
+                                                                <button mat-icon-button type="button" (click)="removeOutput(di, oi)"><mat-icon>remove</mat-icon></button>
+                                                            </div>
+                                                        }
+                                                        <button mat-stroked-button type="button" (click)="addOutput(di)">Add Output</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="action-add-row" style="margin-top: 8px;">
+                        <button mat-stroked-button type="button" (click)="addDevice()">Add Device</button>
+                    </div>
                 </div>
 
             </div>

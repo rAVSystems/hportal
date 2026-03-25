@@ -18,6 +18,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { IconPickerComponent } from '../icon-picker/icon-picker';
 
 type ActionType =
   | 'TurnOn'
@@ -67,6 +68,7 @@ type FieldSpec = {
     MatIconModule,
     DragDropModule,
     MatCheckboxModule,
+    IconPickerComponent,
   ],
   templateUrl: './new-room.html',
   styleUrl: './new-room.scss',
@@ -100,6 +102,7 @@ export class NewRoom {
   selectedDevices = signal<Record<string, string>>({});
   expandedDevices = signal<Set<number>>(new Set());
   expandedGains = signal<Set<number>>(new Set());
+  expandedSources = signal<Set<number>>(new Set());
 
   get gains(): FormArray { return this.form.get('Gains') as FormArray; }
   get gainControls(): FormGroup[] { return this.gains.controls as FormGroup[]; }
@@ -137,6 +140,13 @@ export class NewRoom {
   }
 
   isGainExpanded(index: number): boolean { return this.expandedGains().has(index); }
+
+  dropGain(event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const control = this.gains.at(event.previousIndex);
+    this.gains.removeAt(event.previousIndex, { emitEvent: false });
+    this.gains.insert(event.currentIndex, control, { emitEvent: false });
+  }
 
   readonly interfaceOptions = ['switcher', 'display', 'encoder', 'decoder', 'camera', 'capture', 'wireless', 'network'];
   readonly controlTypeOptions = ['ip', 'qsys', 'rs232', 'cec'];
@@ -317,6 +327,8 @@ export class NewRoom {
       Sources: this.fb.array([]),
       Devices: this.fb.array([]),
       Gains: this.fb.array([]),
+      Pages: this.fb.array([]),
+      Components: this.fb.array([]),
     });
 
     this.devices.valueChanges.subscribe(() => this.syncCtxDevices());
@@ -370,14 +382,14 @@ export class NewRoom {
     return this.fb.group(controls);
   }
 
-  private createActionGroup(): FormGroup {
-    const type: ActionType = 'TurnOn';
+  private createActionGroup(seed?: any): FormGroup {
+    const type: ActionType = (seed?.action as ActionType) ?? 'TurnOn';
     const group = this.fb.group({
       action: this.fb.control<ActionType>(type, {
         nonNullable: true,
         validators: [Validators.required],
       }),
-      params: this.buildParamsGroup(type),
+      params: this.buildParamsGroup(type, seed?.params ?? seed),
     });
 
     const wireDeviceChanges = (g: FormGroup) => {
@@ -429,6 +441,254 @@ export class NewRoom {
     arr.insert(event.currentIndex, control, { emitEvent: false });
   }
 
+  get sources(): FormArray {
+    return this.form.get('Sources') as FormArray;
+  }
+
+  get sourceControls(): FormGroup[] {
+    return this.sources.controls as FormGroup[];
+  }
+
+  private createSourceGroup(key: string, seed?: any): FormGroup {
+    const s = seed ?? {};
+    return this.fb.group({
+      Key: [key],
+      name: [s.Control ?? key],
+      Control: [s.Control ?? key],
+      IsInvisible: [s.IsInvisible ?? false],
+      Label: [s.Label ?? ''],
+      Icon: [s.Icon ?? ''],
+      IconSelected: [s.IconSelected ?? ''],
+      AutoStart: [s.AutoStart ?? false],
+      AutoShutdown: [s.AutoShutdown ?? false],
+      Order: [s.Order ?? 0],
+      Group: [s.Group ?? 'Sources'],
+      Actions: this.fb.array(
+        (Array.isArray(s?.Actions) ? s.Actions : []).map((a: any) =>
+          this.createActionGroup(a)
+        )
+      ),
+    });
+  }
+
+  addSource(): void {
+    const nextIndex = this.sources.length + 1;
+    const key = `Source_${nextIndex}_Btn`;
+    this.sources.push(this.createSourceGroup(key));
+  }
+
+  removeSource(index: number): void {
+    this.sources.removeAt(index);
+    this.expandedSources.update(s => { const n = new Set(s); n.delete(index); return n; });
+  }
+
+  dropSource(event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const control = this.sources.at(event.previousIndex);
+    this.sources.removeAt(event.previousIndex, { emitEvent: false });
+    this.sources.insert(event.currentIndex, control, { emitEvent: false });
+  }
+
+  toggleSourceExpand(index: number): void {
+    this.expandedSources.update(s => {
+      const n = new Set(s);
+      n.has(index) ? n.delete(index) : n.add(index);
+      return n;
+    });
+  }
+
+  isSourceExpanded(index: number): boolean {
+    return this.expandedSources().has(index);
+  }
+
+  getSourceActionsArray(sourceIndex: number): FormArray {
+    return this.sources.at(sourceIndex)?.get('Actions') as FormArray;
+  }
+
+  getSourceActionControls(sourceIndex: number): FormGroup[] {
+    return (this.getSourceActionsArray(sourceIndex)?.controls ?? []) as FormGroup[];
+  }
+
+  addSourceAction(sourceIndex: number): void {
+    this.getSourceActionsArray(sourceIndex)?.push(this.createActionGroup());
+  }
+
+  removeSourceAction(sourceIndex: number, actionIndex: number): void {
+    this.getSourceActionsArray(sourceIndex)?.removeAt(actionIndex);
+  }
+
+  dropSourceAction(sourceIndex: number, event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const arr = this.getSourceActionsArray(sourceIndex);
+    const control = arr.at(event.previousIndex);
+    arr.removeAt(event.previousIndex, { emitEvent: false });
+    arr.insert(event.currentIndex, control, { emitEvent: false });
+  }
+
+  getSourceActionFieldSpecs(sourceIndex: number, actionIndex: number): FieldSpec[] {
+    const arr = this.getSourceActionsArray(sourceIndex);
+    if (!arr) return [];
+    return this.getFieldSpecsFor(arr, actionIndex);
+  }
+
+  // ── Pages ──────────────────────────────────────────────────────────────
+
+  expandedPages = signal<Set<number>>(new Set());
+
+  get pages(): FormArray { return this.form.get('Pages') as FormArray; }
+  get pageControls(): FormGroup[] { return this.pages.controls as FormGroup[]; }
+
+  private buildPageGroup(seed: any = {}): FormGroup {
+    return this.fb.group({
+      Id:          [seed.Id ?? ''],
+      Title:       [seed.Title ?? ''],
+      Subtitle:    [seed.Subtitle ?? ''],
+      Description: [seed.Description ?? ''],
+      Text:        [seed.Text ?? ''],
+      Image:       [seed.Image ?? ''],
+      Actions: this.fb.array(
+        (Array.isArray(seed.Actions) ? seed.Actions : []).map((a: any) => this.createActionGroup(a))
+      ),
+    });
+  }
+
+  addPage(): void { this.pages.push(this.buildPageGroup()); }
+
+  removePage(index: number): void {
+    this.pages.removeAt(index);
+    this.expandedPages.update(s => { const n = new Set(s); n.delete(index); return n; });
+  }
+
+  togglePageExpand(index: number): void {
+    this.expandedPages.update(s => {
+      const n = new Set(s);
+      n.has(index) ? n.delete(index) : n.add(index);
+      return n;
+    });
+  }
+
+  isPageExpanded(index: number): boolean { return this.expandedPages().has(index); }
+
+  getPageActionsArray(pageIndex: number): FormArray {
+    return this.pages.at(pageIndex)?.get('Actions') as FormArray;
+  }
+
+  addPageAction(pageIndex: number): void {
+    this.getPageActionsArray(pageIndex)?.push(this.createActionGroup());
+  }
+
+  removePageAction(pageIndex: number, actionIndex: number): void {
+    this.getPageActionsArray(pageIndex)?.removeAt(actionIndex);
+  }
+
+  getPageActionFieldSpecs(pageIndex: number, actionIndex: number): FieldSpec[] {
+    const arr = this.getPageActionsArray(pageIndex);
+    if (!arr) return [];
+    return this.getFieldSpecsFor(arr, actionIndex);
+  }
+
+  dropPage(event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const control = this.pages.at(event.previousIndex);
+    this.pages.removeAt(event.previousIndex, { emitEvent: false });
+    this.pages.insert(event.currentIndex, control, { emitEvent: false });
+  }
+
+  dropPageAction(pageIndex: number, event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const arr = this.getPageActionsArray(pageIndex);
+    const control = arr.at(event.previousIndex);
+    arr.removeAt(event.previousIndex, { emitEvent: false });
+    arr.insert(event.currentIndex, control, { emitEvent: false });
+  }
+
+  // ── Components ─────────────────────────────────────────────────────────
+
+  expandedComponents = signal<Set<number>>(new Set());
+
+  get components(): FormArray { return this.form.get('Components') as FormArray; }
+  get componentControls(): FormGroup[] { return this.components.controls as FormGroup[]; }
+
+  private buildComponentGroup(key: string, seed: any = {}): FormGroup {
+    const propsObj = seed.Properties ?? {};
+    return this.fb.group({
+      Key:         [key],
+      IsInvisible: [seed.IsInvisible ?? false],
+      Properties:  this.fb.array(
+        Object.entries(propsObj).map(([k, v]) =>
+          this.fb.group({ key: [k], value: [v] })
+        )
+      ),
+      Actions: this.fb.array(
+        (Array.isArray(seed.Actions) ? seed.Actions : []).map((a: any) => this.createActionGroup(a))
+      ),
+    });
+  }
+
+  addComponent(): void {
+    this.components.push(this.buildComponentGroup(`Component_${this.components.length + 1}`));
+  }
+
+  removeComponent(index: number): void {
+    this.components.removeAt(index);
+    this.expandedComponents.update(s => { const n = new Set(s); n.delete(index); return n; });
+  }
+
+  toggleComponentExpand(index: number): void {
+    this.expandedComponents.update(s => {
+      const n = new Set(s);
+      n.has(index) ? n.delete(index) : n.add(index);
+      return n;
+    });
+  }
+
+  isComponentExpanded(index: number): boolean { return this.expandedComponents().has(index); }
+
+  getComponentActionsArray(compIndex: number): FormArray {
+    return this.components.at(compIndex)?.get('Actions') as FormArray;
+  }
+
+  getComponentPropertiesArray(compIndex: number): FormArray {
+    return this.components.at(compIndex)?.get('Properties') as FormArray;
+  }
+
+  addComponentAction(compIndex: number): void {
+    this.getComponentActionsArray(compIndex)?.push(this.createActionGroup());
+  }
+
+  removeComponentAction(compIndex: number, actionIndex: number): void {
+    this.getComponentActionsArray(compIndex)?.removeAt(actionIndex);
+  }
+
+  getComponentActionFieldSpecs(compIndex: number, actionIndex: number): FieldSpec[] {
+    const arr = this.getComponentActionsArray(compIndex);
+    if (!arr) return [];
+    return this.getFieldSpecsFor(arr, actionIndex);
+  }
+
+  addComponentProperty(compIndex: number): void {
+    this.getComponentPropertiesArray(compIndex)?.push(this.fb.group({ key: [''], value: [''] }));
+  }
+
+  removeComponentProperty(compIndex: number, propIndex: number): void {
+    this.getComponentPropertiesArray(compIndex)?.removeAt(propIndex);
+  }
+
+  dropComponent(event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const control = this.components.at(event.previousIndex);
+    this.components.removeAt(event.previousIndex, { emitEvent: false });
+    this.components.insert(event.currentIndex, control, { emitEvent: false });
+  }
+
+  dropComponentAction(compIndex: number, event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const arr = this.getComponentActionsArray(compIndex);
+    const control = arr.at(event.previousIndex);
+    arr.removeAt(event.previousIndex, { emitEvent: false });
+    arr.insert(event.currentIndex, control, { emitEvent: false });
+  }
+
   get devices(): FormArray { return this.form.get('Devices') as FormArray; }
   get deviceControls(): FormGroup[] {
     return this.devices.controls as FormGroup[];
@@ -473,6 +733,13 @@ export class NewRoom {
 
   isDeviceExpanded(index: number): boolean {
     return this.expandedDevices().has(index);
+  }
+
+  dropDevice(event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const control = this.devices.at(event.previousIndex);
+    this.devices.removeAt(event.previousIndex, { emitEvent: false });
+    this.devices.insert(event.currentIndex, control, { emitEvent: false });
   }
 
   getInputsArray(deviceIndex: number): FormArray {
@@ -542,6 +809,14 @@ export class NewRoom {
         ...(row?.params ?? {}),
       }));
 
+    const sourcesObject = (Array.isArray(raw.Sources) ? raw.Sources : []).reduce((acc: any, s: any) => {
+      const key = s.Key || s.Control;
+      if (!key) return acc;
+      const { Key, ...rest } = s;
+      acc[key] = { ...rest, Actions: flattenActions(rest.Actions) };
+      return acc;
+    }, {});
+
     const devicesObject = (Array.isArray(raw.Devices) ? raw.Devices : []).reduce((acc: any, d: any) => {
       const key = d.key; if (!key) return acc;
       const { key: _, Interfaces, ...rest } = d;
@@ -554,12 +829,36 @@ export class NewRoom {
       const { key: _, ...rest } = g; acc[key] = rest; return acc;
     }, {});
 
+    const pagesArray = (Array.isArray(raw.Pages) ? raw.Pages : []).map((p: any) => ({
+      ...p,
+      Actions: flattenActions(p.Actions),
+    }));
+
+    const componentsObject = (Array.isArray(raw.Components) ? raw.Components : []).reduce((acc: any, c: any) => {
+      const key = c.Key;
+      if (!key) return acc;
+      const props = (Array.isArray(c.Properties) ? c.Properties : []).reduce((pa: any, p: any) => {
+        if (p.key) pa[p.key] = p.value;
+        return pa;
+      }, {});
+      acc[key] = {
+        IsInvisible: c.IsInvisible,
+        Properties: props,
+        Actions: flattenActions(c.Actions),
+        Control: {},
+      };
+      return acc;
+    }, {});
+
     const configToSave = {
       ...raw,
       SystemOnActions: flattenActions(raw.SystemOnActions),
       SystemOffActions: flattenActions(raw.SystemOffActions),
+      Sources: sourcesObject,
       Devices: devicesObject,
       Gains: gainsObject,
+      Pages: pagesArray,
+      Components: componentsObject,
     };
 
     const apiBase = (window as any).API_BASE_URL || 'http://192.168.1.225:8080';
@@ -637,6 +936,14 @@ export class NewRoom {
         this.expandedGains.set(new Set());
         Object.entries(config.Gains ?? {}).forEach(([key, g]) => this.gains.push(this.buildGainGroup(key, g)));
         this.syncCtxGains();
+
+        this.pages.clear();
+        this.expandedPages.set(new Set());
+        (Array.isArray(config.Pages) ? config.Pages : []).forEach((p: any) => this.pages.push(this.buildPageGroup(p)));
+
+        this.components.clear();
+        this.expandedComponents.set(new Set());
+        Object.entries(config.Components ?? {}).forEach(([key, c]) => this.components.push(this.buildComponentGroup(key, c)));
       },
     });
   }
