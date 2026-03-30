@@ -6,6 +6,7 @@ import {
   FormArray,
   FormBuilder,
   FormGroup,
+  FormsModule,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
@@ -19,6 +20,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { IconPickerComponent } from '../icon-picker/icon-picker';
+import { Rick } from '../rick/rick';
 
 type ActionType =
   | 'TurnOn'
@@ -60,6 +62,7 @@ type FieldSpec = {
   selector: 'app-new-room',
   imports: [
     CommonModule,
+    FormsModule,
     ReactiveFormsModule,
     MatButtonModule,
     MatFormFieldModule,
@@ -69,6 +72,7 @@ type FieldSpec = {
     DragDropModule,
     MatCheckboxModule,
     IconPickerComponent,
+    Rick,
   ],
   templateUrl: './new-room.html',
   styleUrl: './new-room.scss',
@@ -78,6 +82,10 @@ export class NewRoom {
   errorMessage = signal<string | null>(null);
   showTemplateModal = signal(false);
   showCancelConfirm = signal(false);
+  showSaveTemplateModal = signal(false);
+  templateName = '';
+  savingTemplate = signal(false);
+  saveTemplateError = signal<string | null>(null);
   templates = signal<{ _id: string; name: string; icon: string; createdby: string; created: string; permission: string }[]>([]);
   templatesLoading = signal(false);
   templatesError = signal<string | null>(null);
@@ -158,14 +166,16 @@ export class NewRoom {
         label: 'Device',
         kind: 'select',
         required: true,
-        options: (c) =>
-          c.allDevices
+        options: (c) => [
+          { value: 'System', label: 'System' },
+          ...c.allDevices
             .filter((d) =>
               d.interfaces.some((i) =>
                 ['display', 'projector'].includes(i.toLowerCase())
               )
             )
             .map((d) => ({ value: d.id, label: d.friendlyName ?? d.id })),
+        ],
       },
     ],
     TurnOff: [
@@ -174,14 +184,16 @@ export class NewRoom {
         label: 'Device',
         kind: 'select',
         required: true,
-        options: (c) =>
-          c.allDevices
+        options: (c) => [
+          { value: 'System', label: 'System' },
+          ...c.allDevices
             .filter((d) =>
               d.interfaces.some((i) =>
                 ['display', 'projector'].includes(i.toLowerCase())
               )
             )
             .map((d) => ({ value: d.id, label: d.friendlyName ?? d.id })),
+        ],
       },
     ],
     RouteVideo: [
@@ -229,12 +241,14 @@ export class NewRoom {
               )
               .forEach((enc) => {
                 if (Array.isArray(enc.inputs) && enc.inputs.length) {
-                  enc.inputs.forEach((inp) =>
-                    options.push({
-                      value: inp.Value,
-                      label: `[${enc.friendlyName ?? enc.id}] ${inp.Name}`,
-                    })
-                  );
+                  enc.inputs
+                    .filter((inp) => inp.Name !== 'Clear')
+                    .forEach((inp) =>
+                      options.push({
+                        value: inp.Value,
+                        label: `[${enc.friendlyName ?? enc.id}] ${inp.Name}`,
+                      })
+                    );
                 }
               });
           }
@@ -256,33 +270,33 @@ export class NewRoom {
       },
     ],
     TogglePage: [
+      { key: 'page', label: 'UI', kind: 'text', required: true },
       {
-        key: 'page', label: 'Page', kind: 'select', required: true,
+        key: 'layer', label: 'Page', kind: 'select',
         options: (c) => c.pageIds.map((p) => ({ value: p, label: p })),
       },
-      { key: 'layer', label: 'Layer', kind: 'text' },
       {
         key: 'transition', label: 'Transition', kind: 'select',
         options: (c) => c.transitions.map((t) => ({ value: t, label: t })),
       },
     ],
     ShowPage: [
+      { key: 'page', label: 'UI', kind: 'text', required: true },
       {
-        key: 'page', label: 'Page', kind: 'select', required: true,
+        key: 'layer', label: 'Page', kind: 'select',
         options: (c) => c.pageIds.map((p) => ({ value: p, label: p })),
       },
-      { key: 'layer', label: 'Layer', kind: 'text' },
       {
         key: 'transition', label: 'Transition', kind: 'select',
         options: (c) => c.transitions.map((t) => ({ value: t, label: t })),
       },
     ],
     HidePage: [
+      { key: 'page', label: 'UI', kind: 'text', required: true },
       {
-        key: 'page', label: 'Page', kind: 'select', required: true,
+        key: 'layer', label: 'Page', kind: 'select',
         options: (c) => c.pageIds.map((p) => ({ value: p, label: p })),
       },
-      { key: 'layer', label: 'Layer', kind: 'text' },
       {
         key: 'transition', label: 'Transition', kind: 'select',
         options: (c) => c.transitions.map((t) => ({ value: t, label: t })),
@@ -328,7 +342,6 @@ export class NewRoom {
       Devices: this.fb.array([]),
       Gains: this.fb.array([]),
       Pages: this.fb.array([]),
-      Components: this.fb.array([]),
     });
 
     this.devices.valueChanges.subscribe(() => this.syncCtxDevices());
@@ -539,6 +552,8 @@ export class NewRoom {
   get pageControls(): FormGroup[] { return this.pages.controls as FormGroup[]; }
 
   private buildPageGroup(seed: any = {}): FormGroup {
+    const componentsObj = (seed.Components && typeof seed.Components === 'object' && !Array.isArray(seed.Components))
+      ? seed.Components : {};
     return this.fb.group({
       Id:          [seed.Id ?? ''],
       Title:       [seed.Title ?? ''],
@@ -548,6 +563,9 @@ export class NewRoom {
       Image:       [seed.Image ?? ''],
       Actions: this.fb.array(
         (Array.isArray(seed.Actions) ? seed.Actions : []).map((a: any) => this.createActionGroup(a))
+      ),
+      Components: this.fb.array(
+        Object.entries(componentsObj).map(([key, c]) => this.buildComponentGroup(key, c))
       ),
     });
   }
@@ -602,12 +620,10 @@ export class NewRoom {
     arr.insert(event.currentIndex, control, { emitEvent: false });
   }
 
-  // ── Components ─────────────────────────────────────────────────────────
+  // ── Components (scoped per page) ────────────────────────────────────────
 
-  expandedComponents = signal<Set<number>>(new Set());
-
-  get components(): FormArray { return this.form.get('Components') as FormArray; }
-  get componentControls(): FormGroup[] { return this.components.controls as FormGroup[]; }
+  // expandedComponents is keyed as `pageIndex-compIndex`
+  expandedComponents = signal<Set<string>>(new Set());
 
   private buildComponentGroup(key: string, seed: any = {}): FormGroup {
     const propsObj = seed.Properties ?? {};
@@ -625,65 +641,79 @@ export class NewRoom {
     });
   }
 
-  addComponent(): void {
-    this.components.push(this.buildComponentGroup(`Component_${this.components.length + 1}`));
+  getPageComponentsArray(pageIndex: number): FormArray {
+    return this.pages.at(pageIndex)?.get('Components') as FormArray;
   }
 
-  removeComponent(index: number): void {
-    this.components.removeAt(index);
-    this.expandedComponents.update(s => { const n = new Set(s); n.delete(index); return n; });
+  getPageComponentControls(pageIndex: number): FormGroup[] {
+    return (this.getPageComponentsArray(pageIndex)?.controls ?? []) as FormGroup[];
   }
 
-  toggleComponentExpand(index: number): void {
+  addComponent(pageIndex: number): void {
+    const arr = this.getPageComponentsArray(pageIndex);
+    arr?.push(this.buildComponentGroup(`Component_${arr.length + 1}`));
+  }
+
+  removeComponent(pageIndex: number, compIndex: number): void {
+    this.getPageComponentsArray(pageIndex)?.removeAt(compIndex);
+    const key = `${pageIndex}-${compIndex}`;
+    this.expandedComponents.update(s => { const n = new Set(s); n.delete(key); return n; });
+  }
+
+  toggleComponentExpand(pageIndex: number, compIndex: number): void {
+    const key = `${pageIndex}-${compIndex}`;
     this.expandedComponents.update(s => {
       const n = new Set(s);
-      n.has(index) ? n.delete(index) : n.add(index);
+      n.has(key) ? n.delete(key) : n.add(key);
       return n;
     });
   }
 
-  isComponentExpanded(index: number): boolean { return this.expandedComponents().has(index); }
-
-  getComponentActionsArray(compIndex: number): FormArray {
-    return this.components.at(compIndex)?.get('Actions') as FormArray;
+  isComponentExpanded(pageIndex: number, compIndex: number): boolean {
+    return this.expandedComponents().has(`${pageIndex}-${compIndex}`);
   }
 
-  getComponentPropertiesArray(compIndex: number): FormArray {
-    return this.components.at(compIndex)?.get('Properties') as FormArray;
+  getComponentActionsArray(pageIndex: number, compIndex: number): FormArray {
+    return this.getPageComponentsArray(pageIndex)?.at(compIndex)?.get('Actions') as FormArray;
   }
 
-  addComponentAction(compIndex: number): void {
-    this.getComponentActionsArray(compIndex)?.push(this.createActionGroup());
+  getComponentPropertiesArray(pageIndex: number, compIndex: number): FormArray {
+    return this.getPageComponentsArray(pageIndex)?.at(compIndex)?.get('Properties') as FormArray;
   }
 
-  removeComponentAction(compIndex: number, actionIndex: number): void {
-    this.getComponentActionsArray(compIndex)?.removeAt(actionIndex);
+  addComponentAction(pageIndex: number, compIndex: number): void {
+    this.getComponentActionsArray(pageIndex, compIndex)?.push(this.createActionGroup());
   }
 
-  getComponentActionFieldSpecs(compIndex: number, actionIndex: number): FieldSpec[] {
-    const arr = this.getComponentActionsArray(compIndex);
+  removeComponentAction(pageIndex: number, compIndex: number, actionIndex: number): void {
+    this.getComponentActionsArray(pageIndex, compIndex)?.removeAt(actionIndex);
+  }
+
+  getComponentActionFieldSpecs(pageIndex: number, compIndex: number, actionIndex: number): FieldSpec[] {
+    const arr = this.getComponentActionsArray(pageIndex, compIndex);
     if (!arr) return [];
     return this.getFieldSpecsFor(arr, actionIndex);
   }
 
-  addComponentProperty(compIndex: number): void {
-    this.getComponentPropertiesArray(compIndex)?.push(this.fb.group({ key: [''], value: [''] }));
+  addComponentProperty(pageIndex: number, compIndex: number): void {
+    this.getComponentPropertiesArray(pageIndex, compIndex)?.push(this.fb.group({ key: [''], value: [''] }));
   }
 
-  removeComponentProperty(compIndex: number, propIndex: number): void {
-    this.getComponentPropertiesArray(compIndex)?.removeAt(propIndex);
+  removeComponentProperty(pageIndex: number, compIndex: number, propIndex: number): void {
+    this.getComponentPropertiesArray(pageIndex, compIndex)?.removeAt(propIndex);
   }
 
-  dropComponent(event: CdkDragDrop<any[]>): void {
+  dropComponent(pageIndex: number, event: CdkDragDrop<any[]>): void {
     if (event.previousIndex === event.currentIndex) return;
-    const control = this.components.at(event.previousIndex);
-    this.components.removeAt(event.previousIndex, { emitEvent: false });
-    this.components.insert(event.currentIndex, control, { emitEvent: false });
+    const arr = this.getPageComponentsArray(pageIndex);
+    const control = arr.at(event.previousIndex);
+    arr.removeAt(event.previousIndex, { emitEvent: false });
+    arr.insert(event.currentIndex, control, { emitEvent: false });
   }
 
-  dropComponentAction(compIndex: number, event: CdkDragDrop<any[]>): void {
+  dropComponentAction(pageIndex: number, compIndex: number, event: CdkDragDrop<any[]>): void {
     if (event.previousIndex === event.currentIndex) return;
-    const arr = this.getComponentActionsArray(compIndex);
+    const arr = this.getComponentActionsArray(pageIndex, compIndex);
     const control = arr.at(event.previousIndex);
     arr.removeAt(event.previousIndex, { emitEvent: false });
     arr.insert(event.currentIndex, control, { emitEvent: false });
@@ -786,7 +816,15 @@ export class NewRoom {
       ?? '';
 
     const fakeGroup = { get: (key: string) => key === 'device' ? { value: deviceId } : null } as any;
-    return field.options(this.ctx(), fakeGroup);
+
+    const options = field.options(this.ctx(), fakeGroup);
+
+    // Exclude "System" from System On/Off Actions to avoid loops
+    if (arrName.toLowerCase().startsWith('system')) {
+      return options.filter((o) => o.value !== 'System');
+    }
+
+    return options;
   }
 
   onCancel(): void {
@@ -829,26 +867,33 @@ export class NewRoom {
       const { key: _, ...rest } = g; acc[key] = rest; return acc;
     }, {});
 
-    const pagesArray = (Array.isArray(raw.Pages) ? raw.Pages : []).map((p: any) => ({
-      ...p,
-      Actions: flattenActions(p.Actions),
-    }));
-
-    const componentsObject = (Array.isArray(raw.Components) ? raw.Components : []).reduce((acc: any, c: any) => {
-      const key = c.Key;
-      if (!key) return acc;
-      const props = (Array.isArray(c.Properties) ? c.Properties : []).reduce((pa: any, p: any) => {
-        if (p.key) pa[p.key] = p.value;
-        return pa;
+    const serializeComponents = (compsArray: any[]) =>
+      (Array.isArray(compsArray) ? compsArray : []).reduce((acc: any, c: any) => {
+        const key = c.Key;
+        if (!key) return acc;
+        const props = (Array.isArray(c.Properties) ? c.Properties : []).reduce((pa: any, p: any) => {
+          if (p.key) pa[p.key] = p.value;
+          return pa;
+        }, {});
+        acc[key] = {
+          IsInvisible: c.IsInvisible,
+          Properties: props,
+          Actions: flattenActions(c.Actions),
+          Control: {},
+        };
+        return acc;
       }, {});
-      acc[key] = {
-        IsInvisible: c.IsInvisible,
-        Properties: props,
-        Actions: flattenActions(c.Actions),
-        Control: {},
-      };
-      return acc;
-    }, {});
+
+    const pagesArray = (Array.isArray(raw.Pages) ? raw.Pages : []).map((p: any) => ({
+      Id: p.Id,
+      Title: p.Title,
+      Subtitle: p.Subtitle,
+      Description: p.Description,
+      Text: p.Text,
+      Image: p.Image,
+      Actions: flattenActions(p.Actions),
+      Components: serializeComponents(p.Components),
+    }));
 
     const configToSave = {
       ...raw,
@@ -858,12 +903,14 @@ export class NewRoom {
       Devices: devicesObject,
       Gains: gainsObject,
       Pages: pagesArray,
-      Components: componentsObject,
     };
 
-    const apiBase = (window as any).API_BASE_URL || 'http://192.168.1.225:8080';
+    const apiBase = (window as any).API_BASE_URL || 'http://localhost:8080';
 
-    this.http.post(`${apiBase}/rooms`, { config: configToSave }).subscribe({
+    const token = this.auth.token();
+    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+    this.http.post(`${apiBase}/rooms`, configToSave, { headers }).subscribe({
       next: () => {
         this.saving.set(false);
         this.router.navigate(['/monitor']);
@@ -884,7 +931,7 @@ export class NewRoom {
     this.templatesLoading.set(true);
     this.templatesError.set(null);
 
-    const apiBase = (window as any).API_BASE_URL || 'http://192.168.1.225:8080';
+    const apiBase = (window as any).API_BASE_URL || 'http://localhost:8080';
     const token = this.auth.token();
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
@@ -893,7 +940,7 @@ export class NewRoom {
         this.templates.set(data);
         this.templatesLoading.set(false);
       },
-      error: (err) => {
+      error: (err: any) => {
         this.templatesError.set(err?.error?.error || err?.message || 'Failed to load templates.');
         this.templatesLoading.set(false);
       },
@@ -903,7 +950,7 @@ export class NewRoom {
   applyTemplate(template: { _id: string; name: string }): void {
     this.showTemplateModal.set(false);
 
-    const apiBase = (window as any).API_BASE_URL || 'http://192.168.1.225:8080';
+    const apiBase = (window as any).API_BASE_URL || 'http://localhost:8080';
     const token = this.auth.token();
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
@@ -939,11 +986,8 @@ export class NewRoom {
 
         this.pages.clear();
         this.expandedPages.set(new Set());
-        (Array.isArray(config.Pages) ? config.Pages : []).forEach((p: any) => this.pages.push(this.buildPageGroup(p)));
-
-        this.components.clear();
         this.expandedComponents.set(new Set());
-        Object.entries(config.Components ?? {}).forEach(([key, c]) => this.components.push(this.buildComponentGroup(key, c)));
+        (Array.isArray(config.Pages) ? config.Pages : []).forEach((p: any) => this.pages.push(this.buildPageGroup(p)));
       },
     });
   }
@@ -963,6 +1007,174 @@ export class NewRoom {
   }
 
   saveTemplate(): void {
-    // TODO: implement template saving
+    this.showSaveTemplateModal.set(true);
+    this.templateName = '';
+    this.saveTemplateError.set(null);
+  }
+
+  confirmSaveTemplate(): void {
+    const name = this.templateName.trim();
+    if (!name) { this.saveTemplateError.set('Template name is required.'); return; }
+
+    this.savingTemplate.set(true);
+    this.saveTemplateError.set(null);
+
+    const raw = this.form.getRawValue() as any;
+
+    const flattenActions = (list: any[]) =>
+      (Array.isArray(list) ? list : []).map((row: any) => ({ action: row?.action, ...(row?.params ?? {}) }));
+
+    const serializeComponents = (compsArray: any[]) =>
+      (Array.isArray(compsArray) ? compsArray : []).reduce((acc: any, c: any) => {
+        const key = c.Key; if (!key) return acc;
+        const props = (Array.isArray(c.Properties) ? c.Properties : []).reduce((pa: any, p: any) => { if (p.key) pa[p.key] = p.value; return pa; }, {});
+        acc[key] = { IsInvisible: c.IsInvisible, Properties: props, Actions: flattenActions(c.Actions), Control: {} };
+        return acc;
+      }, {});
+
+    const config = {
+      ...raw,
+      SystemOnActions: flattenActions(raw.SystemOnActions),
+      SystemOffActions: flattenActions(raw.SystemOffActions),
+      Sources: (Array.isArray(raw.Sources) ? raw.Sources : []).reduce((acc: any, s: any) => {
+        const key = s.Key || s.Control; if (!key) return acc;
+        const { Key, ...rest } = s; acc[key] = { ...rest, Actions: flattenActions(rest.Actions) }; return acc;
+      }, {}),
+      Devices: (Array.isArray(raw.Devices) ? raw.Devices : []).reduce((acc: any, d: any) => {
+        const key = d.key; if (!key) return acc;
+        const { key: _, Interfaces, ...rest } = d;
+        acc[key] = { ...rest, Interfaces: Object.entries(Interfaces ?? {}).filter(([, v]) => v).map(([k]) => k) }; return acc;
+      }, {}),
+      Gains: (Array.isArray(raw.Gains) ? raw.Gains : []).reduce((acc: any, g: any) => {
+        const key = g.key; if (!key) return acc; const { key: _, ...rest } = g; acc[key] = rest; return acc;
+      }, {}),
+      Pages: (Array.isArray(raw.Pages) ? raw.Pages : []).map((p: any) => ({
+        Id: p.Id, Title: p.Title, Subtitle: p.Subtitle, Description: p.Description,
+        Text: p.Text, Image: p.Image, Actions: flattenActions(p.Actions), Components: serializeComponents(p.Components),
+      })),
+    };
+
+    const apiBase = (window as any).API_BASE_URL || 'http://localhost:8080';
+    const token = this.auth.token();
+    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+    this.http.post(`${apiBase}/templates`, { name, config }, { headers }).subscribe({
+      next: () => {
+        this.savingTemplate.set(false);
+        this.showSaveTemplateModal.set(false);
+      },
+      error: (err: any) => {
+        this.savingTemplate.set(false);
+        this.saveTemplateError.set(err?.error?.error || err?.message || 'Failed to save template.');
+      },
+    });
+  }
+
+  /** Returns current form value serialized as config — passed to Rick for context */
+  get currentConfig(): any {
+    const raw = this.form.getRawValue() as any;
+
+    const flattenActions = (list: any[]) =>
+      (Array.isArray(list) ? list : []).map((row) => ({
+        action: row?.action,
+        ...(row?.params ?? {}),
+      }));
+
+    const serializeComponents = (compsArray: any[]) =>
+      (Array.isArray(compsArray) ? compsArray : []).reduce((acc: any, c: any) => {
+        const key = c.Key;
+        if (!key) return acc;
+        const props = (Array.isArray(c.Properties) ? c.Properties : []).reduce((pa: any, p: any) => {
+          if (p.key) pa[p.key] = p.value;
+          return pa;
+        }, {});
+        acc[key] = { IsInvisible: c.IsInvisible, Properties: props, Actions: flattenActions(c.Actions), Control: {} };
+        return acc;
+      }, {});
+
+    const sourcesObject = (Array.isArray(raw.Sources) ? raw.Sources : []).reduce((acc: any, s: any) => {
+      const key = s.Key || s.Control;
+      const { Key, ...rest } = { ...s, Actions: flattenActions(s?.Actions) };
+      acc[key] = rest;
+      return acc;
+    }, {});
+
+    const devicesObject = (Array.isArray(raw.Devices) ? raw.Devices : []).reduce((acc: any, d: any) => {
+      const key = d.key;
+      if (!key) return acc;
+      const { key: _, Interfaces, ...rest } = d;
+      acc[key] = { ...rest, Interfaces: Object.entries(Interfaces ?? {}).filter(([, v]) => v).map(([k]) => k) };
+      return acc;
+    }, {});
+
+    const pagesArray = (Array.isArray(raw.Pages) ? raw.Pages : []).map((p: any) => ({
+      Id: p.Id, Title: p.Title, Subtitle: p.Subtitle, Description: p.Description,
+      Text: p.Text, Image: p.Image,
+      Actions: flattenActions(p.Actions),
+      Components: serializeComponents(p.Components),
+    }));
+
+    return {
+      ...raw,
+      SystemOnActions: flattenActions(raw.SystemOnActions),
+      SystemOffActions: flattenActions(raw.SystemOffActions),
+      Sources: sourcesObject,
+      Devices: devicesObject,
+      Pages: pagesArray,
+      Gains: (Array.isArray(raw.Gains) ? raw.Gains : []).reduce((acc: any, g: any) => {
+        const key = g.key; if (!key) return acc;
+        const { key: _, ...rest } = g; acc[key] = rest; return acc;
+      }, {}),
+    };
+  }
+
+  /** Called by Rick when the AI returns tool_use blocks */
+  applyToolCall(tc: { name: string; input: Record<string, any> }): void {
+    const { name, input } = tc;
+
+    if (name === 'set_system_setting') {
+      this.form.get(input['field'])?.setValue(input['value']);
+      return;
+    }
+
+    if (name === 'set_source_field') {
+      const idx = (this.sources.controls as FormGroup[])
+        .findIndex(g => g.get('Key')?.value === input['sourceKey'] || g.get('Control')?.value === input['sourceKey']);
+      if (idx >= 0) (this.sources.at(idx) as FormGroup).get(input['field'])?.setValue(input['value']);
+      return;
+    }
+
+    if (name === 'set_device_field') {
+      const idx = (this.devices.controls as FormGroup[])
+        .findIndex(g => g.get('key')?.value === input['deviceKey']);
+      if (idx >= 0) (this.devices.at(idx) as FormGroup).get(input['field'])?.setValue(input['value']);
+      return;
+    }
+
+    if (name === 'set_gain_field') {
+      const gains = this.form.get('Gains') as FormArray;
+      const idx = (gains.controls as FormGroup[])
+        .findIndex(g => g.get('key')?.value === input['gainKey']);
+      if (idx >= 0) (gains.at(idx) as FormGroup).get(input['field'])?.setValue(input['value']);
+      return;
+    }
+
+    if (name === 'set_page_field') {
+      const idx = (this.pages.controls as FormGroup[])
+        .findIndex(g => g.get('Id')?.value === input['pageId']);
+      if (idx >= 0) (this.pages.at(idx) as FormGroup).get(input['field'])?.setValue(input['value']);
+      return;
+    }
+
+    if (name === 'set_component_field') {
+      const pageIdx = (this.pages.controls as FormGroup[])
+        .findIndex(g => g.get('Id')?.value === input['pageId']);
+      if (pageIdx < 0) return;
+      const comps = this.getPageComponentsArray(pageIdx);
+      const compIdx = (comps.controls as FormGroup[])
+        .findIndex(g => g.get('Key')?.value === input['componentKey']);
+      if (compIdx >= 0) (comps.at(compIdx) as FormGroup).get(input['field'])?.setValue(input['value']);
+      return;
+    }
   }
 }

@@ -6,6 +6,10 @@
 
     <span class="example-spacer"></span>
 
+    @if (auth.hasRole('admin')) {
+      <a class="nav-link" routerLink="/admin/users">Manage Users</a>
+    }
+
     <span class="user-logged-in">
       {{ auth.user()?.username || '' }}
     </span>

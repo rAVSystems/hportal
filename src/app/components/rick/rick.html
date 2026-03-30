@@ -1,0 +1,37 @@
+<div class="rick-panel">
+  <div class="rick-header">
+    <mat-icon class="rick-avatar">smart_toy</mat-icon>
+    <div class="rick-header-text">
+      <span class="rick-name">Rick</span>
+      <span class="rick-subtitle">AI Config Assistant</span>
+    </div>
+  </div>
+
+  <div class="rick-messages" #messagesContainer>
+    @for (msg of messages; track $index) {
+      <div class="rick-message" [class.rick-message--user]="msg.role === 'user'" [class.rick-message--assistant]="msg.role === 'assistant'">
+        <div class="rick-bubble">{{ msg.content }}</div>
+      </div>
+    }
+    @if (thinking) {
+      <div class="rick-message rick-message--assistant">
+        <div class="rick-bubble rick-bubble--thinking">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="rick-input-row">
+    <input
+      class="rick-input"
+      type="text"
+      placeholder="Ask Rick to do it..."
+      [(ngModel)]="inputText"
+      (keydown.enter)="send()"
+    />
+    <button class="rick-send-btn" (click)="send()" [disabled]="!inputText.trim() || thinking">
+      <mat-icon>send</mat-icon>
+    </button>
+  </div>
+</div>

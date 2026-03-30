@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import {
   FormArray,
@@ -21,6 +21,8 @@ import { finalize } from 'rxjs/operators';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { IconPickerComponent } from '../icon-picker/icon-picker';
+import { Rick } from '../rick/rick';
+import { AuthService } from '../../services/auth-service';
 
 type RoomConfigDoc = {
   _id: string;
@@ -77,7 +79,8 @@ type FieldSpec = {
     MatNativeDateModule,
     DragDropModule,
     MatCheckboxModule,
-    IconPickerComponent,],
+    IconPickerComponent,
+    Rick,],
   templateUrl: './edit-page-2.html',
   styleUrl: './edit-page-2.scss',
 })
@@ -86,6 +89,7 @@ export class EditPage2 {
   loading = signal(true);
   loadError = signal<string | null>(null);
   saving = signal(false);
+  saveSuccess = signal(false);
   showCancelConfirm = signal(false);
   readonly panelOpenState = signal(false);
 
@@ -122,14 +126,16 @@ export class EditPage2 {
         label: 'Device',
         kind: 'select',
         required: true,
-        options: (c) =>
-          c.allDevices
+        options: (c) => [
+          { value: 'System', label: 'System' },
+          ...c.allDevices
             .filter((d) =>
               d.interfaces.some((i) =>
                 ['display', 'projector'].includes(i.toLowerCase())
               )
             )
             .map((d) => ({ value: d.id, label: d.friendlyName ?? d.id })),
+        ],
       },
     ],
     TurnOff: [
@@ -138,14 +144,16 @@ export class EditPage2 {
         label: 'Device',
         kind: 'select',
         required: true,
-        options: (c) =>
-          c.allDevices
+        options: (c) => [
+          { value: 'System', label: 'System' },
+          ...c.allDevices
             .filter((d) =>
               d.interfaces.some((i) =>
                 ['display', 'projector'].includes(i.toLowerCase())
               )
             )
             .map((d) => ({ value: d.id, label: d.friendlyName ?? d.id })),
+        ],
       },
     ],
     RouteVideo: [
@@ -204,12 +212,14 @@ export class EditPage2 {
 
             encoders.forEach((enc) => {
               if (Array.isArray(enc.inputs) && enc.inputs.length) {
-                enc.inputs.forEach((inp) => {
-                  options.push({
-                    value: inp.Value,
-                    label: `[${enc.friendlyName ?? enc.id}] ${inp.Name}`,
+                enc.inputs
+                  .filter((inp) => inp.Name !== 'Clear')
+                  .forEach((inp) => {
+                    options.push({
+                      value: inp.Value,
+                      label: `[${enc.friendlyName ?? enc.id}] ${inp.Name}`,
+                    });
                   });
-                });
               }
             });
           }
@@ -246,14 +256,13 @@ export class EditPage2 {
       },
     ],
     TogglePage: [
+      { key: 'page', label: 'UI', kind: 'text', required: true },
       {
-        key: 'page',
+        key: 'layer',
         label: 'Page',
         kind: 'select',
-        required: true,
         options: (c) => c.pageIds.map((p) => ({ value: p, label: p })),
       },
-      { key: 'layer', label: 'Layer', kind: 'text' },
       {
         key: 'transition',
         label: 'Transition',
@@ -262,14 +271,13 @@ export class EditPage2 {
       },
     ],
     ShowPage: [
+      { key: 'page', label: 'UI', kind: 'text', required: true },
       {
-        key: 'page',
+        key: 'layer',
         label: 'Page',
         kind: 'select',
-        required: true,
         options: (c) => c.pageIds.map((p) => ({ value: p, label: p })),
       },
-      { key: 'layer', label: 'Layer', kind: 'text' },
       {
         key: 'transition',
         label: 'Transition',
@@ -278,14 +286,13 @@ export class EditPage2 {
       },
     ],
     HidePage: [
+      { key: 'page', label: 'UI', kind: 'text', required: true },
       {
-        key: 'page',
+        key: 'layer',
         label: 'Page',
         kind: 'select',
-        required: true,
         options: (c) => c.pageIds.map((p) => ({ value: p, label: p })),
       },
-      { key: 'layer', label: 'Layer', kind: 'text' },
       {
         key: 'transition',
         label: 'Transition',
@@ -319,7 +326,8 @@ export class EditPage2 {
     private readonly fb: FormBuilder,
     private readonly http: HttpClient,
     private readonly route: ActivatedRoute,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly auth: AuthService
   ) {
     this.form = this.fb.group({
       campus: ['', Validators.required],
@@ -327,7 +335,7 @@ export class EditPage2 {
       room: ['', Validators.required],
       ip: ['', Validators.required],
       roomType: [''],
-      version: [1],
+      version: [{ value: 1, disabled: true }],
       updatedBy: [''],
 
       // These are bound to mat-datepicker -> Date | null
@@ -344,7 +352,6 @@ export class EditPage2 {
       Devices: this.fb.array([]),
       Gains: this.fb.array([]),
       Pages: this.fb.array([]),
-      Components: this.fb.array([]),
     });
 
     this.devices.valueChanges.subscribe(() => this.syncCtxDevices());
@@ -406,11 +413,13 @@ export class EditPage2 {
 
   addDevice(): void {
     this.devices.push(this.buildDeviceGroup());
+    this.markDirty();
   }
 
   removeDevice(index: number): void {
     this.devices.removeAt(index);
     this.expandedDevices.update(s => { const n = new Set(s); n.delete(index); return n; });
+    this.markDirty();
   }
 
   toggleDeviceExpand(index: number): void {
@@ -430,6 +439,7 @@ export class EditPage2 {
     const control = this.devices.at(event.previousIndex);
     this.devices.removeAt(event.previousIndex, { emitEvent: false });
     this.devices.insert(event.currentIndex, control, { emitEvent: false });
+    this.markDirty();
   }
 
   getInputsArray(deviceIndex: number): FormArray {
@@ -442,18 +452,22 @@ export class EditPage2 {
 
   addInput(deviceIndex: number): void {
     this.getInputsArray(deviceIndex).push(this.fb.group({ Name: [''], Value: [''] }));
+    this.markDirty();
   }
 
   removeInput(deviceIndex: number, inputIndex: number): void {
     this.getInputsArray(deviceIndex).removeAt(inputIndex);
+    this.markDirty();
   }
 
   addOutput(deviceIndex: number): void {
     this.getOutputsArray(deviceIndex).push(this.fb.group({ Name: [''], Value: [''] }));
+    this.markDirty();
   }
 
   removeOutput(deviceIndex: number, outputIndex: number): void {
     this.getOutputsArray(deviceIndex).removeAt(outputIndex);
+    this.markDirty();
   }
 
   get gains(): FormArray { return this.form.get('Gains') as FormArray; }
@@ -480,11 +494,12 @@ export class EditPage2 {
     });
   }
 
-  addGain(): void { this.gains.push(this.buildGainGroup()); }
+  addGain(): void { this.gains.push(this.buildGainGroup()); this.markDirty(); }
 
   removeGain(index: number): void {
     this.gains.removeAt(index);
     this.expandedGains.update(s => { const n = new Set(s); n.delete(index); return n; });
+    this.markDirty();
   }
 
   toggleGainExpand(index: number): void {
@@ -498,6 +513,7 @@ export class EditPage2 {
     const control = this.gains.at(event.previousIndex);
     this.gains.removeAt(event.previousIndex, { emitEvent: false });
     this.gains.insert(event.currentIndex, control, { emitEvent: false });
+    this.markDirty();
   }
 
   ngOnInit(): void {
@@ -540,7 +556,7 @@ export class EditPage2 {
   
     /** API base (keep simple for now; you can move this to environment.ts later) */
     private apiBase(): string {
-      return (window as any).API_BASE_URL || 'http://192.168.1.225:8080';
+      return (window as any).API_BASE_URL || 'http://localhost:8080';
     }
   
     private fetchRoom(): void {
@@ -550,7 +566,7 @@ export class EditPage2 {
       const url = `${this.apiBase()}/rooms/${this.roomId}`;
   
       this.http
-        .get<RoomConfigDoc>(url)
+        .get<RoomConfigDoc>(url, { headers: { Authorization: `Bearer ${this.auth.token()}` } })
         .pipe(
           finalize(() => {
             this.loading.set(false);
@@ -643,18 +659,11 @@ export class EditPage2 {
         this.gains.push(this.buildGainGroup(key, gainsObj[key]));
       });
 
-      // Rebuild Pages (array)
+      // Rebuild Pages (array) — each page contains its own Components
       this.pages.clear();
       this.expandedPages.set(new Set());
       (Array.isArray(cfg?.Pages) ? cfg.Pages : []).forEach((p: any) => {
         this.pages.push(this.buildPageGroup(p));
-      });
-
-      // Rebuild Components (object → FormArray)
-      this.components.clear();
-      this.expandedComponents.set(new Set());
-      Object.entries(cfg?.Components ?? {}).forEach(([key, c]) => {
-        this.components.push(this.buildComponentGroup(key, c));
       });
     }
   
@@ -770,25 +779,29 @@ export class EditPage2 {
     const nextIndex = this.sources.length + 1;
     const key = `Source_${nextIndex}_Btn`;
     this.sources.push(this.createSourceGroup(key));
+    this.markDirty();
   }
-  
+
   removeSource(index: number): void {
     this.sources.removeAt(index);
+    this.markDirty();
   }
-  
+
   getSourceActionControls(sourceIndex: number): FormGroup[] {
     const arr = this.sources.at(sourceIndex)?.get('Actions') as FormArray;
     return (arr?.controls ?? []) as FormGroup[];
   }
-  
+
   addSourceAction(sourceIndex: number): void {
     const arr = this.sources.at(sourceIndex)?.get('Actions') as FormArray;
     arr?.push(this.createActionGroup());
+    this.markDirty();
   }
-  
+
   removeSourceAction(sourceIndex: number, actionIndex: number): void {
     const arr = this.sources.at(sourceIndex)?.get('Actions') as FormArray;
     arr?.removeAt(actionIndex);
+    this.markDirty();
   }
 
   dropSource(event: CdkDragDrop<any[]>): void {
@@ -796,6 +809,7 @@ export class EditPage2 {
     const control = this.sources.at(event.previousIndex);
     this.sources.removeAt(event.previousIndex, { emitEvent: false });
     this.sources.insert(event.currentIndex, control, { emitEvent: false });
+    this.markDirty();
   }
 
   toggleSourceExpand(index: number): void {
@@ -820,6 +834,7 @@ export class EditPage2 {
     const control = arr.at(event.previousIndex);
     arr.removeAt(event.previousIndex, { emitEvent: false });
     arr.insert(event.currentIndex, control, { emitEvent: false });
+    this.markDirty();
   }
   
   getSourceActionFieldSpecs(sourceIndex: number, actionIndex: number): FieldSpec[] {
@@ -864,6 +879,8 @@ export class EditPage2 {
   get pageControls(): FormGroup[] { return this.pages.controls as FormGroup[]; }
 
   private buildPageGroup(seed: any = {}): FormGroup {
+    const componentsObj = (seed.Components && typeof seed.Components === 'object' && !Array.isArray(seed.Components))
+      ? seed.Components : {};
     return this.fb.group({
       Id:          [seed.Id ?? ''],
       Title:       [seed.Title ?? ''],
@@ -874,14 +891,18 @@ export class EditPage2 {
       Actions: this.fb.array(
         (Array.isArray(seed.Actions) ? seed.Actions : []).map((a: any) => this.createActionGroup(a))
       ),
+      Components: this.fb.array(
+        Object.entries(componentsObj).map(([key, c]) => this.buildComponentGroup(key, c))
+      ),
     });
   }
 
-  addPage(): void { this.pages.push(this.buildPageGroup()); }
+  addPage(): void { this.pages.push(this.buildPageGroup()); this.markDirty(); }
 
   removePage(index: number): void {
     this.pages.removeAt(index);
     this.expandedPages.update(s => { const n = new Set(s); n.delete(index); return n; });
+    this.markDirty();
   }
 
   togglePageExpand(index: number): void {
@@ -900,10 +921,12 @@ export class EditPage2 {
 
   addPageAction(pageIndex: number): void {
     this.getPageActionsArray(pageIndex)?.push(this.createActionGroup());
+    this.markDirty();
   }
 
   removePageAction(pageIndex: number, actionIndex: number): void {
     this.getPageActionsArray(pageIndex)?.removeAt(actionIndex);
+    this.markDirty();
   }
 
   getPageActionFieldSpecs(pageIndex: number, actionIndex: number): FieldSpec[] {
@@ -917,6 +940,7 @@ export class EditPage2 {
     const control = this.pages.at(event.previousIndex);
     this.pages.removeAt(event.previousIndex, { emitEvent: false });
     this.pages.insert(event.currentIndex, control, { emitEvent: false });
+    this.markDirty();
   }
 
   dropPageAction(pageIndex: number, event: CdkDragDrop<any[]>): void {
@@ -925,14 +949,13 @@ export class EditPage2 {
     const control = arr.at(event.previousIndex);
     arr.removeAt(event.previousIndex, { emitEvent: false });
     arr.insert(event.currentIndex, control, { emitEvent: false });
+    this.markDirty();
   }
 
-  // ── Components ─────────────────────────────────────────────────────────
+  // ── Components (scoped per page) ────────────────────────────────────────
 
-  expandedComponents = signal<Set<number>>(new Set());
-
-  get components(): FormArray { return this.form.get('Components') as FormArray; }
-  get componentControls(): FormGroup[] { return this.components.controls as FormGroup[]; }
+  // expandedComponents is keyed as `pageIndex-compIndex`
+  expandedComponents = signal<Set<string>>(new Set());
 
   private buildComponentGroup(key: string, seed: any = {}): FormGroup {
     const propsObj = seed.Properties ?? {};
@@ -950,68 +973,90 @@ export class EditPage2 {
     });
   }
 
-  addComponent(): void {
-    this.components.push(this.buildComponentGroup(`Component_${this.components.length + 1}`));
+  getPageComponentsArray(pageIndex: number): FormArray {
+    return this.pages.at(pageIndex)?.get('Components') as FormArray;
   }
 
-  removeComponent(index: number): void {
-    this.components.removeAt(index);
-    this.expandedComponents.update(s => { const n = new Set(s); n.delete(index); return n; });
+  getPageComponentControls(pageIndex: number): FormGroup[] {
+    return (this.getPageComponentsArray(pageIndex)?.controls ?? []) as FormGroup[];
   }
 
-  toggleComponentExpand(index: number): void {
+  addComponent(pageIndex: number): void {
+    const arr = this.getPageComponentsArray(pageIndex);
+    arr?.push(this.buildComponentGroup(`Component_${arr.length + 1}`));
+    this.markDirty();
+  }
+
+  removeComponent(pageIndex: number, compIndex: number): void {
+    this.getPageComponentsArray(pageIndex)?.removeAt(compIndex);
+    const key = `${pageIndex}-${compIndex}`;
+    this.expandedComponents.update(s => { const n = new Set(s); n.delete(key); return n; });
+    this.markDirty();
+  }
+
+  toggleComponentExpand(pageIndex: number, compIndex: number): void {
+    const key = `${pageIndex}-${compIndex}`;
     this.expandedComponents.update(s => {
       const n = new Set(s);
-      n.has(index) ? n.delete(index) : n.add(index);
+      n.has(key) ? n.delete(key) : n.add(key);
       return n;
     });
   }
 
-  isComponentExpanded(index: number): boolean { return this.expandedComponents().has(index); }
-
-  getComponentActionsArray(compIndex: number): FormArray {
-    return this.components.at(compIndex)?.get('Actions') as FormArray;
+  isComponentExpanded(pageIndex: number, compIndex: number): boolean {
+    return this.expandedComponents().has(`${pageIndex}-${compIndex}`);
   }
 
-  getComponentPropertiesArray(compIndex: number): FormArray {
-    return this.components.at(compIndex)?.get('Properties') as FormArray;
+  getComponentActionsArray(pageIndex: number, compIndex: number): FormArray {
+    return this.getPageComponentsArray(pageIndex)?.at(compIndex)?.get('Actions') as FormArray;
   }
 
-  addComponentAction(compIndex: number): void {
-    this.getComponentActionsArray(compIndex)?.push(this.createActionGroup());
+  getComponentPropertiesArray(pageIndex: number, compIndex: number): FormArray {
+    return this.getPageComponentsArray(pageIndex)?.at(compIndex)?.get('Properties') as FormArray;
   }
 
-  removeComponentAction(compIndex: number, actionIndex: number): void {
-    this.getComponentActionsArray(compIndex)?.removeAt(actionIndex);
+  addComponentAction(pageIndex: number, compIndex: number): void {
+    this.getComponentActionsArray(pageIndex, compIndex)?.push(this.createActionGroup());
+    this.markDirty();
   }
 
-  getComponentActionFieldSpecs(compIndex: number, actionIndex: number): FieldSpec[] {
-    const arr = this.getComponentActionsArray(compIndex);
+  removeComponentAction(pageIndex: number, compIndex: number, actionIndex: number): void {
+    this.getComponentActionsArray(pageIndex, compIndex)?.removeAt(actionIndex);
+    this.markDirty();
+  }
+
+  getComponentActionFieldSpecs(pageIndex: number, compIndex: number, actionIndex: number): FieldSpec[] {
+    const arr = this.getComponentActionsArray(pageIndex, compIndex);
     if (!arr) return [];
     return this.getFieldSpecsFor(arr, actionIndex);
   }
 
-  addComponentProperty(compIndex: number): void {
-    this.getComponentPropertiesArray(compIndex)?.push(this.fb.group({ key: [''], value: [''] }));
+  addComponentProperty(pageIndex: number, compIndex: number): void {
+    this.getComponentPropertiesArray(pageIndex, compIndex)?.push(this.fb.group({ key: [''], value: [''] }));
+    this.markDirty();
   }
 
-  removeComponentProperty(compIndex: number, propIndex: number): void {
-    this.getComponentPropertiesArray(compIndex)?.removeAt(propIndex);
+  removeComponentProperty(pageIndex: number, compIndex: number, propIndex: number): void {
+    this.getComponentPropertiesArray(pageIndex, compIndex)?.removeAt(propIndex);
+    this.markDirty();
   }
 
-  dropComponent(event: CdkDragDrop<any[]>): void {
+  dropComponent(pageIndex: number, event: CdkDragDrop<any[]>): void {
     if (event.previousIndex === event.currentIndex) return;
-    const control = this.components.at(event.previousIndex);
-    this.components.removeAt(event.previousIndex, { emitEvent: false });
-    this.components.insert(event.currentIndex, control, { emitEvent: false });
-  }
-
-  dropComponentAction(compIndex: number, event: CdkDragDrop<any[]>): void {
-    if (event.previousIndex === event.currentIndex) return;
-    const arr = this.getComponentActionsArray(compIndex);
+    const arr = this.getPageComponentsArray(pageIndex);
     const control = arr.at(event.previousIndex);
     arr.removeAt(event.previousIndex, { emitEvent: false });
     arr.insert(event.currentIndex, control, { emitEvent: false });
+    this.markDirty();
+  }
+
+  dropComponentAction(pageIndex: number, compIndex: number, event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const arr = this.getComponentActionsArray(pageIndex, compIndex);
+    const control = arr.at(event.previousIndex);
+    arr.removeAt(event.previousIndex, { emitEvent: false });
+    arr.insert(event.currentIndex, control, { emitEvent: false });
+    this.markDirty();
   }
 
   // Template helpers for dynamic action rendering
@@ -1037,23 +1082,38 @@ export class EditPage2 {
 
       const fakeGroup = { get: (key: string) => key === 'device' ? { value: deviceId } : null } as any;
 
-      return field.options(this.ctx(), fakeGroup);
+      const options = field.options(this.ctx(), fakeGroup);
+
+      // Exclude "System" from System On/Off Actions to avoid loops
+      if (arrName.toLowerCase().startsWith('system')) {
+        return options.filter((o) => o.value !== 'System');
+      }
+
+      return options;
     }
   
+    private markDirty(): void {
+      this.form.markAsDirty();
+    }
+
     addSystemOnAction(): void {
       this.systemOnActions.push(this.createActionGroup());
+      this.markDirty();
     }
-  
+
     removeSystemOnAction(index: number): void {
       this.systemOnActions.removeAt(index);
+      this.markDirty();
     }
-  
+
     addSystemOffAction(): void {
       this.systemOffActions.push(this.createActionGroup());
+      this.markDirty();
     }
-  
+
     removeSystemOffAction(index: number): void {
       this.systemOffActions.removeAt(index);
+      this.markDirty();
     }
 
     dropAction(arr: FormArray, event: CdkDragDrop<any[]>): void {
@@ -1061,17 +1121,14 @@ export class EditPage2 {
       const control = arr.at(event.previousIndex);
       arr.removeAt(event.previousIndex, { emitEvent: false });
       arr.insert(event.currentIndex, control, { emitEvent: false });
+      this.markDirty();
     }
 
     scrollTo(id: string): void {
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
     }
 
-    onCancel(): void {
-      this.showCancelConfirm.set(true);
-    }
-
-    confirmCancel(): void {
+    goBack(): void {
       this.router.navigate(['/monitor']);
     }
   
@@ -1114,26 +1171,33 @@ export class EditPage2 {
         return acc;
       }, {});
 
-      const pagesArray = (Array.isArray(raw.Pages) ? raw.Pages : []).map((p: any) => ({
-        ...p,
-        Actions: flattenActions(p.Actions),
-      }));
-
-      const componentsObject = (Array.isArray(raw.Components) ? raw.Components : []).reduce((acc: any, c: any) => {
-        const key = c.Key;
-        if (!key) return acc;
-        const props = (Array.isArray(c.Properties) ? c.Properties : []).reduce((pa: any, p: any) => {
-          if (p.key) pa[p.key] = p.value;
-          return pa;
+      const serializeComponents = (compsArray: any[]) =>
+        (Array.isArray(compsArray) ? compsArray : []).reduce((acc: any, c: any) => {
+          const key = c.Key;
+          if (!key) return acc;
+          const props = (Array.isArray(c.Properties) ? c.Properties : []).reduce((pa: any, p: any) => {
+            if (p.key) pa[p.key] = p.value;
+            return pa;
+          }, {});
+          acc[key] = {
+            IsInvisible: c.IsInvisible,
+            Properties: props,
+            Actions: flattenActions(c.Actions),
+            Control: {},
+          };
+          return acc;
         }, {});
-        acc[key] = {
-          IsInvisible: c.IsInvisible,
-          Properties: props,
-          Actions: flattenActions(c.Actions),
-          Control: {},
-        };
-        return acc;
-      }, {});
+
+      const pagesArray = (Array.isArray(raw.Pages) ? raw.Pages : []).map((p: any) => ({
+        Id: p.Id,
+        Title: p.Title,
+        Subtitle: p.Subtitle,
+        Description: p.Description,
+        Text: p.Text,
+        Image: p.Image,
+        Actions: flattenActions(p.Actions),
+        Components: serializeComponents(p.Components),
+      }));
 
       const configToSave = {
         ...raw,
@@ -1145,7 +1209,6 @@ export class EditPage2 {
         Sources: sourcesObject,
         Devices: devicesObject,
         Pages: pagesArray,
-        Components: componentsObject,
         Gains: (Array.isArray(raw.Gains) ? raw.Gains : []).reduce((acc: any, g: any) => {
           const key = g.key; if (!key) return acc;
           const { key: _, ...rest } = g;
@@ -1155,10 +1218,12 @@ export class EditPage2 {
   
       const url = `${this.apiBase()}/rooms/${this.roomId}`;
   
-      this.http.put(url, { config: configToSave }).subscribe({
+      this.http.put(url, configToSave, { headers: { Authorization: `Bearer ${this.auth.token()}` } }).subscribe({
         next: () => {
           this.saving.set(false);
-          this.router.navigate(['/monitor']);
+          this.saveSuccess.set(true);
+          this.form.markAsPristine();
+          setTimeout(() => this.saveSuccess.set(false), 2000);
         },
         error: (err: HttpErrorResponse) => {
           this.saving.set(false);
@@ -1167,7 +1232,115 @@ export class EditPage2 {
       });
     }
   
-    private parseDate(value: any): Date | null {
+    /** Returns current form value serialized as config — passed to Rick for context */
+  get currentConfig(): any {
+    const raw = this.form.getRawValue() as any;
+
+    const flattenActions = (list: any[]) =>
+      (Array.isArray(list) ? list : []).map((row) => ({
+        action: row?.action,
+        ...(row?.params ?? {}),
+      }));
+
+    const serializeComponents = (compsArray: any[]) =>
+      (Array.isArray(compsArray) ? compsArray : []).reduce((acc: any, c: any) => {
+        const key = c.Key;
+        if (!key) return acc;
+        const props = (Array.isArray(c.Properties) ? c.Properties : []).reduce((pa: any, p: any) => {
+          if (p.key) pa[p.key] = p.value;
+          return pa;
+        }, {});
+        acc[key] = { IsInvisible: c.IsInvisible, Properties: props, Actions: flattenActions(c.Actions), Control: {} };
+        return acc;
+      }, {});
+
+    const sourcesObject = (Array.isArray(raw.Sources) ? raw.Sources : []).reduce((acc: any, s: any) => {
+      const key = s.Key || s.Control;
+      const { Key, ...rest } = { ...s, Actions: flattenActions(s?.Actions) };
+      acc[key] = rest;
+      return acc;
+    }, {});
+
+    const devicesObject = (Array.isArray(raw.Devices) ? raw.Devices : []).reduce((acc: any, d: any) => {
+      const key = d.key;
+      if (!key) return acc;
+      const { key: _, Interfaces, ...rest } = d;
+      acc[key] = { ...rest, Interfaces: Object.entries(Interfaces ?? {}).filter(([, v]) => v).map(([k]) => k) };
+      return acc;
+    }, {});
+
+    const pagesArray = (Array.isArray(raw.Pages) ? raw.Pages : []).map((p: any) => ({
+      Id: p.Id, Title: p.Title, Subtitle: p.Subtitle, Description: p.Description,
+      Text: p.Text, Image: p.Image,
+      Actions: flattenActions(p.Actions),
+      Components: serializeComponents(p.Components),
+    }));
+
+    return {
+      ...raw,
+      SystemOnActions: flattenActions(raw.SystemOnActions),
+      SystemOffActions: flattenActions(raw.SystemOffActions),
+      Sources: sourcesObject,
+      Devices: devicesObject,
+      Pages: pagesArray,
+      Gains: (Array.isArray(raw.Gains) ? raw.Gains : []).reduce((acc: any, g: any) => {
+        const key = g.key; if (!key) return acc;
+        const { key: _, ...rest } = g; acc[key] = rest; return acc;
+      }, {}),
+    };
+  }
+
+  /** Called by Rick when the AI returns tool_use blocks */
+  applyToolCall(tc: { name: string; input: Record<string, any> }): void {
+    const { name, input } = tc;
+
+    if (name === 'set_system_setting') {
+      this.form.get(input['field'])?.setValue(input['value']);
+      return;
+    }
+
+    if (name === 'set_source_field') {
+      const idx = (this.sources.controls as FormGroup[])
+        .findIndex(g => g.get('Key')?.value === input['sourceKey'] || g.get('Control')?.value === input['sourceKey']);
+      if (idx >= 0) (this.sources.at(idx) as FormGroup).get(input['field'])?.setValue(input['value']);
+      return;
+    }
+
+    if (name === 'set_device_field') {
+      const idx = (this.devices.controls as FormGroup[])
+        .findIndex(g => g.get('key')?.value === input['deviceKey']);
+      if (idx >= 0) (this.devices.at(idx) as FormGroup).get(input['field'])?.setValue(input['value']);
+      return;
+    }
+
+    if (name === 'set_gain_field') {
+      const gains = this.form.get('Gains') as FormArray;
+      const idx = (gains.controls as FormGroup[])
+        .findIndex(g => g.get('key')?.value === input['gainKey']);
+      if (idx >= 0) (gains.at(idx) as FormGroup).get(input['field'])?.setValue(input['value']);
+      return;
+    }
+
+    if (name === 'set_page_field') {
+      const idx = (this.pages.controls as FormGroup[])
+        .findIndex(g => g.get('Id')?.value === input['pageId']);
+      if (idx >= 0) (this.pages.at(idx) as FormGroup).get(input['field'])?.setValue(input['value']);
+      return;
+    }
+
+    if (name === 'set_component_field') {
+      const pageIdx = (this.pages.controls as FormGroup[])
+        .findIndex(g => g.get('Id')?.value === input['pageId']);
+      if (pageIdx < 0) return;
+      const comps = this.getPageComponentsArray(pageIdx);
+      const compIdx = (comps.controls as FormGroup[])
+        .findIndex(g => g.get('Key')?.value === input['componentKey']);
+      if (compIdx >= 0) (comps.at(compIdx) as FormGroup).get(input['field'])?.setValue(input['value']);
+      return;
+    }
+  }
+
+  private parseDate(value: any): Date | null {
       if (!value) return null;
   
       // Already a Date

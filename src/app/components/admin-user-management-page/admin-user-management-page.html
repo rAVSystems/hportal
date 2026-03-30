@@ -1,1 +1,164 @@
-<p>admin-user-management-page works!</p>
+<div class="user-management-page">
+  <div class="page-section">
+    <div class="section-header">
+      <button mat-icon-button (click)="goBack()"><mat-icon>arrow_back</mat-icon></button>
+      <h2 class="section-title">User Management</h2>
+      <button mat-stroked-button (click)="loadUsers()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+    </div>
+
+    @if (error()) {
+      <div class="error-banner">{{ error() }}</div>
+    }
+
+    <div class="table-wrapper">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Roles</th>
+            <th>Status</th>
+            <th>Last Login</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of users(); track user._id) {
+            <tr [class.inactive-row]="!user.isActive">
+              <!-- Username cell -->
+              <td class="username-cell">
+                @if (stateFor(user._id).editingUsername) {
+                  <div class="inline-edit-row">
+                    <input
+                      class="inline-input"
+                      type="text"
+                      [(ngModel)]="stateFor(user._id).pendingUsername"
+                      (keydown.enter)="updateUsername(user._id)"
+                      (keydown.escape)="cancelEditUsername(user._id)"
+                      [disabled]="stateFor(user._id).saving"
+                      autofocus
+                    />
+                    <button
+                      mat-icon-button
+                      class="icon-btn-sm"
+                      title="Save"
+                      (click)="updateUsername(user._id)"
+                      [disabled]="stateFor(user._id).saving"
+                    >
+                      <mat-icon>check</mat-icon>
+                    </button>
+                    <button
+                      mat-icon-button
+                      class="icon-btn-sm"
+                      title="Cancel"
+                      (click)="cancelEditUsername(user._id)"
+                      [disabled]="stateFor(user._id).saving"
+                    >
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                } @else {
+                  <div class="username-display">
+                    <span>{{ user.username }}</span>
+                    <button
+                      mat-icon-button
+                      class="icon-btn-sm edit-icon"
+                      title="Edit username"
+                      (click)="startEditUsername(user._id)"
+                    >
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  </div>
+                }
+              </td>
+
+              <!-- Roles cell -->
+              <td class="roles-cell">
+                <div class="roles-checkboxes">
+                  @for (role of allRoles; track role) {
+                    <label class="role-checkbox-label">
+                      <input
+                        type="checkbox"
+                        [checked]="user.roles.includes(role)"
+                        (change)="updateRoles(user._id, onRoleChange(user.roles, role, $event))"
+                      />
+                      {{ role }}
+                    </label>
+                  }
+                </div>
+              </td>
+
+              <!-- Status cell -->
+              <td class="status-cell">
+                <button
+                  mat-stroked-button
+                  class="status-btn"
+                  [class.active-btn]="user.isActive"
+                  [class.inactive-btn]="!user.isActive"
+                  (click)="toggleActive(user._id, !user.isActive)"
+                >
+                  {{ user.isActive ? 'Active' : 'Inactive' }}
+                </button>
+              </td>
+
+              <!-- Last Login cell -->
+              <td class="date-cell">{{ formatDate(user.lastLoginAt) }}</td>
+
+              <!-- Actions cell -->
+              <td class="actions-cell">
+                @if (stateFor(user._id).showPasswordInput) {
+                  <div class="inline-edit-row">
+                    <input
+                      class="inline-input password-input"
+                      type="password"
+                      placeholder="New password"
+                      [(ngModel)]="stateFor(user._id).pendingPassword"
+                      (keydown.enter)="resetPassword(user._id)"
+                      (keydown.escape)="togglePasswordInput(user._id)"
+                      [disabled]="stateFor(user._id).saving"
+                    />
+                    <button
+                      mat-icon-button
+                      class="icon-btn-sm"
+                      title="Confirm password reset"
+                      (click)="resetPassword(user._id)"
+                      [disabled]="stateFor(user._id).saving"
+                    >
+                      <mat-icon>check</mat-icon>
+                    </button>
+                    <button
+                      mat-icon-button
+                      class="icon-btn-sm"
+                      title="Cancel"
+                      (click)="togglePasswordInput(user._id)"
+                      [disabled]="stateFor(user._id).saving"
+                    >
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                } @else {
+                  <button
+                    mat-stroked-button
+                    class="reset-pw-btn"
+                    (click)="togglePasswordInput(user._id)"
+                  >
+                    <mat-icon>lock_reset</mat-icon>
+                    Reset Password
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+
+          @if (users().length === 0) {
+            <tr>
+              <td colspan="5" class="empty-row">No users found.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

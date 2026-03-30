@@ -45,6 +45,24 @@
   </div>
 }
 
+@if (showSaveTemplateModal()) {
+  <div class="modal-backdrop" (click)="showSaveTemplateModal.set(false)">
+    <div class="modal-confirm" (click)="$event.stopPropagation()">
+      <p class="modal-confirm-message">Save as Template</p>
+      <input class="inline-input full" type="text" placeholder="Template name" [(ngModel)]="templateName" />
+      @if (saveTemplateError()) {
+        <p style="color: red; font-size: 13px; margin: 0;">{{ saveTemplateError() }}</p>
+      }
+      <div class="modal-confirm-actions">
+        <button mat-stroked-button type="button" (click)="showSaveTemplateModal.set(false)">Cancel</button>
+        <button mat-flat-button color="primary" type="button" (click)="confirmSaveTemplate()" [disabled]="savingTemplate()">
+          @if (savingTemplate()) { Saving… } @else { Save Template }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
 @if (showCancelConfirm()) {
   <div class="modal-backdrop" (click)="showCancelConfirm.set(false)">
     <div class="modal-confirm" (click)="$event.stopPropagation()">
@@ -64,7 +82,6 @@
             <a class="side-nav-link" (click)="scrollTo('section-system-on')">System On Actions</a>
             <a class="side-nav-link" (click)="scrollTo('section-system-off')">System Off Actions</a>
             <a class="side-nav-link" (click)="scrollTo('section-sources')">Sources</a>
-            <a class="side-nav-link" (click)="scrollTo('section-components')">Components</a>
             <a class="side-nav-link" (click)="scrollTo('section-pages')">Pages</a>
             <a class="side-nav-link" (click)="scrollTo('section-audio')">Audio Settings</a>
             <a class="side-nav-link" (click)="scrollTo('section-devices')">Devices</a>
@@ -336,108 +353,6 @@
                     </div>
                 </div>
 
-                <!-- ── Components ──────────────────────────────────────── -->
-                <div class="form-section" id="section-components">
-                    <h2 class="section-title">Components</h2>
-                    <div class="source-list" formArrayName="Components" cdkDropList (cdkDropListDropped)="dropComponent($event)">
-                        @for (comp of componentControls; track comp; let ci = $index) {
-                            <div class="source-row" [formGroupName]="ci" cdkDrag>
-                                <div class="source-drag-handle" cdkDragHandle>
-                                    <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
-                                </div>
-                                <div class="source-summary" (click)="toggleComponentExpand(ci)">
-                                    <div class="source-summary-fields">
-                                        <div class="source-field">
-                                            <label>Key</label>
-                                            <input class="inline-input" formControlName="Key" (click)="$event.stopPropagation()" placeholder="ComponentKey" />
-                                        </div>
-                                        <div class="source-field source-field--checkbox">
-                                            <label>Invisible</label>
-                                            <mat-checkbox formControlName="IsInvisible" (click)="$event.stopPropagation()"></mat-checkbox>
-                                        </div>
-                                    </div>
-                                    <mat-icon class="source-expand-icon">{{ isComponentExpanded(ci) ? 'expand_less' : 'expand_more' }}</mat-icon>
-                                </div>
-                                <button mat-icon-button type="button" (click)="removeComponent(ci)">
-                                    <mat-icon>delete</mat-icon>
-                                </button>
-                                @if (isComponentExpanded(ci)) {
-                                    <div class="source-detail">
-                                        <div class="detail-actions-section">
-                                            <label class="detail-actions-title">Properties</label>
-                                            <div formArrayName="Properties">
-                                                @for (prop of getComponentPropertiesArray(ci).controls; track prop; let pri = $index) {
-                                                    <div class="prop-row" [formGroupName]="pri">
-                                                        <select class="inline-select" formControlName="key" style="width: 120px;">
-                                                            <option value="">— type —</option>
-                                                            <option value="Value">Value</option>
-                                                            <option value="String">String</option>
-                                                            <option value="Boolean">Boolean</option>
-                                                            <option value="CssClass">CssClass</option>
-                                                        </select>
-                                                        <input class="inline-input" formControlName="value" placeholder="Value" style="width: 200px;" />
-                                                        <button mat-icon-button type="button" (click)="removeComponentProperty(ci, pri)">
-                                                            <mat-icon>delete</mat-icon>
-                                                        </button>
-                                                    </div>
-                                                }
-                                            </div>
-                                            <div class="action-add-row">
-                                                <button mat-stroked-button type="button" (click)="addComponentProperty(ci)">Add Property</button>
-                                            </div>
-                                        </div>
-                                        <div class="detail-actions-section">
-                                            <label class="detail-actions-title">Actions</label>
-                                            <div class="action-list" [formArrayName]="'Actions'" cdkDropList (cdkDropListDropped)="dropComponentAction(ci, $event)">
-                                                @for (a of getComponentActionsArray(ci).controls; track a; let ai = $index) {
-                                                    <div class="action-row-div" [formGroupName]="ai" cdkDrag>
-                                                        <div class="action-drag-handle" cdkDragHandle>
-                                                            <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
-                                                        </div>
-                                                        <div class="table-param-field action-type-field">
-                                                            <label>Action</label>
-                                                            <select formControlName="action">
-                                                                @for (opt of actionTypes(); track opt) {
-                                                                    <option [value]="opt">{{ opt }}</option>
-                                                                }
-                                                            </select>
-                                                        </div>
-                                                        <div class="action-params" formGroupName="params">
-                                                            @for (field of getComponentActionFieldSpecs(ci, ai); track field.key) {
-                                                                <div class="table-param-field">
-                                                                    <label>{{ field.label }}</label>
-                                                                    @if (field.kind === 'select') {
-                                                                        <select [formControlName]="field.key">
-                                                                            @for (opt of getOptionsForField(field, 'comp-' + ci, getComponentActionsArray(ci), ai); track opt.value) {
-                                                                                <option [value]="opt.value">{{ opt.label }}</option>
-                                                                            }
-                                                                        </select>
-                                                                    }
-                                                                    @if (field.kind === 'text') { <input type="text" [formControlName]="field.key" /> }
-                                                                    @if (field.kind === 'number') { <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" /> }
-                                                                </div>
-                                                            }
-                                                        </div>
-                                                        <button mat-icon-button type="button" (click)="removeComponentAction(ci, ai)">
-                                                            <mat-icon>delete</mat-icon>
-                                                        </button>
-                                                    </div>
-                                                }
-                                            </div>
-                                            <div class="action-add-row">
-                                                <button mat-stroked-button type="button" (click)="addComponentAction(ci)">Add Action</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                        }
-                    </div>
-                    <div class="action-add-row" style="margin-top: 8px;">
-                        <button mat-stroked-button type="button" (click)="addComponent()">Add Component</button>
-                    </div>
-                </div>
-
                 <!-- ── Pages ──────────────────────────────────────────── -->
                 <div class="form-section" id="section-pages">
                     <h2 class="section-title">Pages</h2>
@@ -456,6 +371,14 @@
                                         <div class="source-field">
                                             <label>Title</label>
                                             <input class="inline-input" formControlName="Title" (click)="$event.stopPropagation()" placeholder="Title" />
+                                        </div>
+                                        <div class="source-field">
+                                            <label>Subtitle</label>
+                                            <input class="inline-input" formControlName="Subtitle" (click)="$event.stopPropagation()" placeholder="Subtitle" />
+                                        </div>
+                                        <div class="source-field">
+                                            <label>Image</label>
+                                            <input class="inline-input" formControlName="Image" (click)="$event.stopPropagation()" placeholder="CSS class or URL" />
                                         </div>
                                     </div>
                                     <mat-icon class="source-expand-icon">{{ isPageExpanded(pi) ? 'expand_less' : 'expand_more' }}</mat-icon>
@@ -523,6 +446,107 @@
                                             </div>
                                             <div class="action-add-row">
                                                 <button mat-stroked-button type="button" (click)="addPageAction(pi)">Add Action</button>
+                                            </div>
+                                        </div>
+                                        <!-- ── Components ── -->
+                                        <div class="detail-actions-section">
+                                            <label class="detail-actions-title">Components</label>
+                                            <div class="source-list" formArrayName="Components" cdkDropList (cdkDropListDropped)="dropComponent(pi, $event)">
+                                                @for (comp of getPageComponentControls(pi); track comp; let ci = $index) {
+                                                    <div class="source-row" [formGroupName]="ci" cdkDrag>
+                                                        <div class="source-drag-handle" cdkDragHandle>
+                                                            <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                                        </div>
+                                                        <div class="source-summary" (click)="toggleComponentExpand(pi, ci)">
+                                                            <div class="source-summary-fields">
+                                                                <div class="source-field">
+                                                                    <label>Key</label>
+                                                                    <input class="inline-input" formControlName="Key" (click)="$event.stopPropagation()" placeholder="ComponentKey" />
+                                                                </div>
+                                                                <div class="source-field source-field--checkbox">
+                                                                    <label>Invisible</label>
+                                                                    <mat-checkbox formControlName="IsInvisible" (click)="$event.stopPropagation()"></mat-checkbox>
+                                                                </div>
+                                                            </div>
+                                                            <mat-icon class="source-expand-icon">{{ isComponentExpanded(pi, ci) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                                                        </div>
+                                                        <button mat-icon-button type="button" (click)="removeComponent(pi, ci)">
+                                                            <mat-icon>delete</mat-icon>
+                                                        </button>
+                                                        @if (isComponentExpanded(pi, ci)) {
+                                                            <div class="source-detail">
+                                                                <div class="detail-actions-section">
+                                                                    <label class="detail-actions-title">Properties</label>
+                                                                    <div formArrayName="Properties">
+                                                                        @for (prop of getComponentPropertiesArray(pi, ci).controls; track prop; let pri = $index) {
+                                                                            <div class="prop-row" [formGroupName]="pri">
+                                                                                <select class="inline-select" formControlName="key" style="width: 120px;">
+                                                                                    <option value="">— type —</option>
+                                                                                    <option value="Value">Value</option>
+                                                                                    <option value="String">String</option>
+                                                                                    <option value="Boolean">Boolean</option>
+                                                                                    <option value="CssClass">CssClass</option>
+                                                                                </select>
+                                                                                <input class="inline-input" formControlName="value" placeholder="Value" style="width: 200px;" />
+                                                                                <button mat-icon-button type="button" (click)="removeComponentProperty(pi, ci, pri)">
+                                                                                    <mat-icon>delete</mat-icon>
+                                                                                </button>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                    <div class="action-add-row">
+                                                                        <button mat-stroked-button type="button" (click)="addComponentProperty(pi, ci)">Add Property</button>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="detail-actions-section">
+                                                                    <label class="detail-actions-title">Actions</label>
+                                                                    <div class="action-list" [formArrayName]="'Actions'" cdkDropList (cdkDropListDropped)="dropComponentAction(pi, ci, $event)">
+                                                                        @for (a of getComponentActionsArray(pi, ci).controls; track a; let ai = $index) {
+                                                                            <div class="action-row-div" [formGroupName]="ai" cdkDrag>
+                                                                                <div class="action-drag-handle" cdkDragHandle>
+                                                                                    <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                                                                </div>
+                                                                                <div class="table-param-field action-type-field">
+                                                                                    <label>Action</label>
+                                                                                    <select formControlName="action">
+                                                                                        @for (opt of actionTypes(); track opt) {
+                                                                                            <option [value]="opt">{{ opt }}</option>
+                                                                                        }
+                                                                                    </select>
+                                                                                </div>
+                                                                                <div class="action-params" formGroupName="params">
+                                                                                    @for (field of getComponentActionFieldSpecs(pi, ci, ai); track field.key) {
+                                                                                        <div class="table-param-field">
+                                                                                            <label>{{ field.label }}</label>
+                                                                                            @if (field.kind === 'select') {
+                                                                                                <select [formControlName]="field.key">
+                                                                                                    @for (opt of getOptionsForField(field, 'comp-' + pi + '-' + ci, getComponentActionsArray(pi, ci), ai); track opt.value) {
+                                                                                                        <option [value]="opt.value">{{ opt.label }}</option>
+                                                                                                    }
+                                                                                                </select>
+                                                                                            }
+                                                                                            @if (field.kind === 'text') { <input type="text" [formControlName]="field.key" /> }
+                                                                                            @if (field.kind === 'number') { <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" /> }
+                                                                                        </div>
+                                                                                    }
+                                                                                </div>
+                                                                                <button mat-icon-button type="button" (click)="removeComponentAction(pi, ci, ai)">
+                                                                                    <mat-icon>delete</mat-icon>
+                                                                                </button>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                    <div class="action-add-row">
+                                                                        <button mat-stroked-button type="button" (click)="addComponentAction(pi, ci)">Add Action</button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                            <div class="action-add-row">
+                                                <button mat-stroked-button type="button" (click)="addComponent(pi)">Add Component</button>
                                             </div>
                                         </div>
                                     </div>
@@ -727,5 +751,5 @@
         </form>
     </div>
 
-    <div class="side-nav-bar"></div>
+    <app-rick class="rick-column" [config]="currentConfig" (toolCall)="applyToolCall($event)"></app-rick>
 </div>

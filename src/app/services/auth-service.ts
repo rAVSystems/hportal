@@ -21,8 +21,8 @@ export class AuthService {
   private http = inject(HttpClient);
 
   // Raspberry Pi API base URL
-  private apiBase = 'http://192.168.1.225:8080';
-
+  //private apiBase = 'http://192.168.1.225:8080';
+  private apiBase = 'http://localhost:8080';
   private readonly tokenKey = 'avportal_token';
   private readonly userKey = 'avportal_user';
 

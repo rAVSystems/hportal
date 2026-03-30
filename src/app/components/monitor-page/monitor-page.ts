@@ -43,7 +43,7 @@ export type RoomDoc = {
 })
 export class MonitorPage implements OnInit {
   // Keep this consistent with AuthService/api setup
-  private readonly apiBase = 'http://192.168.1.225:8080';
+  private readonly apiBase = 'http://localhost:8080';
 
   rooms = signal<RoomDoc[]>([]);
   isLoading = signal(false);

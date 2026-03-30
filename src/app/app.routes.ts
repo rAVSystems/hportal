@@ -5,6 +5,7 @@ import { MonitorPage } from './components/monitor-page/monitor-page';
 import { EditPage2 } from './components/edit-page-2/edit-page-2';
 import { NewRoom } from './components/new-room/new-room';
 import { Control } from './components/control/control';
+import { AdminUserManagementPage } from './components/admin-user-management-page/admin-user-management-page';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -14,4 +15,5 @@ export const routes: Routes = [
   { path: 'edit/:id', component: EditPage2 },
   { path: 'newroom', component: NewRoom },
   { path: 'control/:roomId/:ip', component: Control },
+  { path: 'admin/users', component: AdminUserManagementPage },
 ];
