@@ -1,0 +1,169 @@
+@if (pendingDeleteId()) {
+  <div class="modal-backdrop" (click)="cancelDelete()">
+    <div class="modal-confirm" (click)="$event.stopPropagation()">
+      <p class="modal-confirm-message">Delete Template</p>
+      <p class="modal-confirm-sub">To confirm, enter the template name below.</p>
+      <div class="modal-confirm-fields">
+        <input
+          class="inline-input"
+          type="text"
+          [placeholder]="pendingDeleteTemplate?.name ?? ''"
+          [value]="deleteConfirmInput()"
+          (input)="deleteConfirmInput.set($any($event.target).value)"
+        />
+      </div>
+      @if (deleteError()) {
+        <p class="modal-confirm-error">{{ deleteError() }}</p>
+      }
+      <div class="modal-confirm-actions">
+        <button mat-stroked-button type="button" (click)="cancelDelete()">Cancel</button>
+        <button mat-flat-button color="warn" type="button" (click)="confirmDelete()" [disabled]="deleting()">
+          @if (deleting()) { Deleting… } @else { Delete }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<div class="profile-page">
+
+  <div class="page-section">
+    <div class="section-header">
+      <button mat-icon-button (click)="goBack()"><mat-icon>arrow_back</mat-icon></button>
+      <h2 class="section-title">My Profile</h2>
+    </div>
+
+    <div class="profile-body">
+
+      <!-- Username -->
+      <div class="profile-card">
+        <h3 class="card-title">Username</h3>
+        <div class="field-row">
+          <input
+            class="inline-input"
+            type="text"
+            placeholder="New username"
+            [value]="newUsername()"
+            (input)="newUsername.set($any($event.target).value)"
+          />
+          <button mat-flat-button color="primary" (click)="saveUsername()" [disabled]="savingUsername()">
+            @if (savingUsername()) { Saving… } @else { Save }
+          </button>
+        </div>
+        @if (usernameError()) {
+          <p class="field-error">{{ usernameError() }}</p>
+        }
+        @if (usernameSuccess()) {
+          <p class="field-success">Username updated.</p>
+        }
+      </div>
+
+      <!-- Password -->
+      <div class="profile-card">
+        <h3 class="card-title">Change Password</h3>
+        <div class="field-col">
+          <input
+            class="inline-input"
+            type="password"
+            placeholder="New password"
+            [value]="newPassword()"
+            (input)="newPassword.set($any($event.target).value)"
+          />
+          <input
+            class="inline-input"
+            type="password"
+            placeholder="Confirm new password"
+            [value]="confirmPassword()"
+            (input)="confirmPassword.set($any($event.target).value)"
+          />
+          <button mat-flat-button color="primary" (click)="savePassword()" [disabled]="savingPassword()">
+            @if (savingPassword()) { Saving… } @else { Save Password }
+          </button>
+        </div>
+        @if (passwordError()) {
+          <p class="field-error">{{ passwordError() }}</p>
+        }
+        @if (passwordSuccess()) {
+          <p class="field-success">Password updated.</p>
+        }
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Templates -->
+  <div class="page-section templates-section">
+    <div class="section-header">
+      <h2 class="section-title">My Templates</h2>
+      <button mat-stroked-button (click)="loadTemplates()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+    </div>
+
+    @if (templatesError()) {
+      <div class="error-banner">{{ templatesError() }}</div>
+    }
+
+    <div class="table-wrapper">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Permission</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of templates(); track t._id) {
+            <tr>
+              <td class="username-cell">
+                @if (stateFor(t._id).editingName) {
+                  <div class="inline-edit-row">
+                    <input
+                      class="inline-input"
+                      type="text"
+                      [(ngModel)]="stateFor(t._id).pendingName"
+                      (keydown.enter)="saveName(t._id)"
+                      (keydown.escape)="cancelEditName(t._id)"
+                      [disabled]="stateFor(t._id).saving"
+                      autofocus
+                    />
+                    <button mat-icon-button class="icon-btn-sm" title="Save" (click)="saveName(t._id)" [disabled]="stateFor(t._id).saving">
+                      <mat-icon>check</mat-icon>
+                    </button>
+                    <button mat-icon-button class="icon-btn-sm" title="Cancel" (click)="cancelEditName(t._id)" [disabled]="stateFor(t._id).saving">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                } @else {
+                  <div class="username-display">
+                    <span>{{ t.name }}</span>
+                    <button mat-icon-button class="icon-btn-sm edit-icon" title="Rename" (click)="startEditName(t._id, t.name)">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  </div>
+                }
+              </td>
+              <td class="date-cell">{{ t.permission }}</td>
+              <td class="date-cell">{{ formatDate(t.created) }}</td>
+              <td class="actions-cell">
+                <button mat-stroked-button class="delete-btn" (click)="promptDelete(t._id)">
+                  <mat-icon>delete</mat-icon>
+                  Delete
+                </button>
+              </td>
+            </tr>
+          }
+          @if (templates().length === 0 && !templatesLoading()) {
+            <tr>
+              <td colspan="4" class="empty-row">No templates yet.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

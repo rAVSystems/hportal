@@ -1,0 +1,121 @@
+@if (pendingDeleteId()) {
+  <div class="modal-backdrop" (click)="cancelDelete()">
+    <div class="modal-confirm" (click)="$event.stopPropagation()">
+      <p class="modal-confirm-message">Delete Template</p>
+      <p class="modal-confirm-sub">To confirm, enter the template name below.</p>
+      <div class="modal-confirm-fields">
+        <input
+          class="inline-input"
+          type="text"
+          [placeholder]="pendingDeleteTemplate?.name ?? ''"
+          [value]="deleteConfirmInput()"
+          (input)="deleteConfirmInput.set($any($event.target).value)"
+        />
+      </div>
+      @if (deleteError()) {
+        <p class="modal-confirm-error">{{ deleteError() }}</p>
+      }
+      <div class="modal-confirm-actions">
+        <button mat-stroked-button type="button" (click)="cancelDelete()">Cancel</button>
+        <button mat-flat-button color="warn" type="button" (click)="confirmDelete()" [disabled]="deleting()">
+          @if (deleting()) { Deleting… } @else { Delete }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<div class="user-management-page">
+  <div class="page-section">
+    <div class="section-header">
+      <button mat-icon-button (click)="goBack()"><mat-icon>arrow_back</mat-icon></button>
+      <h2 class="section-title">Template Management</h2>
+      <button mat-stroked-button (click)="loadTemplates()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+    </div>
+
+    @if (error()) {
+      <div class="error-banner">{{ error() }}</div>
+    }
+
+    <div class="table-wrapper">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Created By</th>
+            <th>Permission</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of templates(); track t._id) {
+            <tr>
+              <!-- Name cell -->
+              <td class="username-cell">
+                @if (stateFor(t._id).editingName) {
+                  <div class="inline-edit-row">
+                    <input
+                      class="inline-input"
+                      type="text"
+                      [(ngModel)]="stateFor(t._id).pendingName"
+                      (keydown.enter)="saveName(t._id)"
+                      (keydown.escape)="cancelEditName(t._id)"
+                      [disabled]="stateFor(t._id).saving"
+                      autofocus
+                    />
+                    <button mat-icon-button class="icon-btn-sm" title="Save" (click)="saveName(t._id)" [disabled]="stateFor(t._id).saving">
+                      <mat-icon>check</mat-icon>
+                    </button>
+                    <button mat-icon-button class="icon-btn-sm" title="Cancel" (click)="cancelEditName(t._id)" [disabled]="stateFor(t._id).saving">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                } @else {
+                  <div class="username-display">
+                    <span>{{ t.name }}</span>
+                    <button mat-icon-button class="icon-btn-sm edit-icon" title="Rename" (click)="startEditName(t._id, t.name)">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  </div>
+                }
+              </td>
+
+              <!-- Created By cell -->
+              <td>{{ t.createdby }}</td>
+
+              <!-- Permission cell -->
+              <td class="permission-cell">
+                <select class="permission-select" [(ngModel)]="t.permission" (ngModelChange)="updatePermission(t._id, $event)">
+                  @for (p of permissionOptions; track p) {
+                    <option [value]="p">{{ p }}</option>
+                  }
+                </select>
+              </td>
+
+              <!-- Created date cell -->
+              <td class="date-cell">{{ formatDate(t.created) }}</td>
+
+              <!-- Actions cell -->
+              <td class="actions-cell">
+                <button mat-stroked-button class="delete-btn" (click)="promptDelete(t._id)">
+                  <mat-icon>delete</mat-icon>
+                  Delete
+                </button>
+              </td>
+            </tr>
+          }
+
+          @if (templates().length === 0) {
+            <tr>
+              <td colspan="5" class="empty-row">No templates found.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

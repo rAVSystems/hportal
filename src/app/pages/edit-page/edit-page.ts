@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, OnDestroy, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import {
   FormArray,
@@ -9,7 +9,6 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,9 +19,10 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { finalize } from 'rxjs/operators';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { IconPickerComponent } from '../icon-picker/icon-picker';
-import { Rick } from '../rick/rick';
+import { IconPickerComponent } from '../../components/icon-picker/icon-picker';
+import { Rick } from '../../components/rick/rick';
 import { AuthService } from '../../services/auth-service';
+import { NavigationGuardService } from '../../services/navigation-guard.service';
 
 type RoomConfigDoc = {
   _id: string;
@@ -37,7 +37,10 @@ type ActionType =
   | 'ShowPage'
   | 'HidePage'
   | 'StartAutoshutdown'
-  | 'SetGain';
+  | 'SetGain'
+  | 'SetCameraPreset'
+  | 'RecallCameraPreset'
+  | 'RecallSnapshot';
 
 type Option = { value: string; label: string };
 
@@ -60,13 +63,14 @@ type FieldSpec = {
   label: string;
   kind: 'text' | 'number' | 'select';
   required?: boolean;
+  default?: any;
   min?: number;
   max?: number;
   options?: (ctx: EditorContext, group?: FormGroup) => Option[];
 };
 
 @Component({
-  selector: 'app-edit-page-2',
+  selector: 'app-edit-page',
   imports: [
     CommonModule,
     ReactiveFormsModule,
@@ -81,16 +85,29 @@ type FieldSpec = {
     MatCheckboxModule,
     IconPickerComponent,
     Rick,],
-  templateUrl: './edit-page-2.html',
-  styleUrl: './edit-page-2.scss',
+  templateUrl: './edit-page.html',
+  styleUrl: './edit-page.scss',
 })
-export class EditPage2 {
+export class EditPage implements OnDestroy {
 /** UI state */
   loading = signal(true);
   loadError = signal<string | null>(null);
   saving = signal(false);
   saveSuccess = signal(false);
+  saveError = signal<string | null>(null);
   showCancelConfirm = signal(false);
+  showDeleteConfirm = signal(false);
+  deleteConfirmBuilding = signal('');
+  deleting = signal(false);
+  deleteError = signal<string | null>(null);
+  showTemplateModal = signal(false);
+  templatesLoading = signal(false);
+  templatesError = signal<string | null>(null);
+  templates = signal<{ _id: string; name: string; icon: string; createdby: string; created: string; permission: string }[]>([]);
+  showSaveTemplateModal = signal(false);
+  templateName = signal('');
+  savingTemplate = signal(false);
+  saveTemplateError = signal<string | null>(null);
   readonly panelOpenState = signal(false);
 
   /** Route param */
@@ -167,7 +184,6 @@ export class EditPage2 {
             .filter((d) =>
               d.interfaces.some((i) =>
                 i.toLowerCase().includes('switcher') ||
-                i.toLowerCase().includes('encoder') ||
                 i.toLowerCase().includes('decoder')
               )
             )
@@ -256,7 +272,7 @@ export class EditPage2 {
       },
     ],
     TogglePage: [
-      { key: 'page', label: 'UI', kind: 'text', required: true },
+      { key: 'page', label: 'UI', kind: 'select', required: true, options: () => [{ value: 'In-Room', label: 'In-Room' }, { value: 'Advanced', label: 'Advanced' }] },
       {
         key: 'layer',
         label: 'Page',
@@ -271,7 +287,7 @@ export class EditPage2 {
       },
     ],
     ShowPage: [
-      { key: 'page', label: 'UI', kind: 'text', required: true },
+      { key: 'page', label: 'UI', kind: 'select', required: true, default: 'In-Room', options: () => [{ value: 'In-Room', label: 'In-Room' }, { value: 'Advanced', label: 'Advanced' }] },
       {
         key: 'layer',
         label: 'Page',
@@ -286,7 +302,7 @@ export class EditPage2 {
       },
     ],
     HidePage: [
-      { key: 'page', label: 'UI', kind: 'text', required: true },
+      { key: 'page', label: 'UI', kind: 'select', required: true, default: 'In-Room', options: () => [{ value: 'In-Room', label: 'In-Room' }, { value: 'Advanced', label: 'Advanced' }] },
       {
         key: 'layer',
         label: 'Page',
@@ -313,6 +329,27 @@ export class EditPage2 {
       },
       { key: 'level', label: 'Level', kind: 'number', required: true, min: 0, max: 100 },
     ],
+    SetCameraPreset: [
+      {
+        key: 'camera', label: 'Camera', kind: 'select', required: true,
+        options: (c) => c.allDevices
+          .filter(d => d.interfaces.some(i => i.toLowerCase() === 'camera'))
+          .map(d => ({ value: d.id, label: d.friendlyName || d.id })),
+      },
+      { key: 'preset', label: 'Preset', kind: 'text', required: true },
+    ],
+    RecallCameraPreset: [
+      {
+        key: 'camera', label: 'Camera', kind: 'select', required: true,
+        options: (c) => c.allDevices
+          .filter(d => d.interfaces.some(i => i.toLowerCase() === 'camera'))
+          .map(d => ({ value: d.id, label: d.friendlyName || d.id })),
+      },
+      { key: 'preset', label: 'Preset', kind: 'text', required: true },
+    ],
+    RecallSnapshot: [
+      { key: 'snapshot', label: 'Snapshot', kind: 'text', required: true },
+    ],
   };
 
   readonly actionTypes = signal<ActionType[]>(
@@ -327,7 +364,8 @@ export class EditPage2 {
     private readonly http: HttpClient,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
-    private readonly auth: AuthService
+    readonly auth: AuthService,
+    private readonly navGuard: NavigationGuardService
   ) {
     this.form = this.fb.group({
       campus: ['', Validators.required],
@@ -360,19 +398,14 @@ export class EditPage2 {
 
   private syncCtxDevices(): void {
     const allDevices = this.deviceControls.map((g) => {
-      const ifaces = g.get('Interfaces')?.value ?? {};
+      const raw = g.getRawValue();
+      const ifaces = raw.Interfaces ?? {};
       return {
-        id: g.get('key')?.value ?? '',
-        friendlyName: g.get('FriendlyName')?.value ?? '',
+        id: raw.key ?? '',
+        friendlyName: raw.FriendlyName ?? '',
         interfaces: Object.entries(ifaces).filter(([, v]) => v).map(([k]) => k),
-        inputs: (g.get('Inputs') as FormArray)?.controls.map((c) => ({
-          Name: (c as FormGroup).get('Name')?.value ?? '',
-          Value: (c as FormGroup).get('Value')?.value ?? '',
-        })) ?? [],
-        outputs: (g.get('Outputs') as FormArray)?.controls.map((c) => ({
-          Name: (c as FormGroup).get('Name')?.value ?? '',
-          Value: (c as FormGroup).get('Value')?.value ?? '',
-        })) ?? [],
+        inputs: (raw.Inputs ?? []).map((c: any) => ({ Name: c.Name ?? '', Value: c.Value ?? '' })),
+        outputs: (raw.Outputs ?? []).map((c: any) => ({ Name: c.Name ?? '', Value: c.Value ?? '' })),
       };
     });
     this.ctx.update(c => ({ ...c, allDevices }));
@@ -387,27 +420,42 @@ export class EditPage2 {
     return this.form.get('Devices') as FormArray;
   }
 
+  get canEditDeviceAdmin(): boolean {
+    return this.auth.hasRole('admin');
+  }
+
+  get canEditDeviceCredentials(): boolean {
+    return this.auth.hasRole('admin') || this.auth.hasRole('editor');
+  }
+
+  /** Admins only: add/remove pages, components, gains; edit keys */
+  get canEditStructure(): boolean {
+    return this.auth.hasRole('admin');
+  }
+
   get deviceControls(): FormGroup[] {
     return this.devices.controls as FormGroup[];
   }
 
   private buildDeviceGroup(key: string = '', d: any = {}): FormGroup {
+    const isAdmin = this.canEditDeviceAdmin;
+    const adminState = (v: any) => isAdmin ? [v] : [{ value: v, disabled: true }];
     return this.fb.group({
-      key: [key],
-      FriendlyName: [d.FriendlyName ?? ''],
-      Make: [d.Make ?? ''],
-      Model: [d.Model ?? ''],
+      key: adminState(key),
+      FriendlyName: adminState(d.FriendlyName ?? ''),
+      Make: adminState(d.Make ?? ''),
+      Model: adminState(d.Model ?? ''),
       IpAddress: [d.IpAddress ?? ''],
-      Description: [d.Description ?? ''],
-      DefaultInput: [d.DefaultInput ?? null],
+      Description: adminState(d.Description ?? ''),
+      DefaultInput: adminState(d.DefaultInput ?? null),
       Username: [d.Username ?? ''],
       Password: [d.Password ?? ''],
-      ControlType: [d.ControlType ?? 'ip'],
+      ControlType: adminState(d.ControlType ?? 'ip'),
       Interfaces: this.fb.group(
-        Object.fromEntries(this.interfaceOptions.map(i => [i, [(d.Interfaces ?? []).includes(i)]]))
+        Object.fromEntries(this.interfaceOptions.map(i => [i, isAdmin ? [(d.Interfaces ?? []).includes(i)] : [{ value: (d.Interfaces ?? []).includes(i), disabled: true }]]))
       ),
-      Inputs: this.fb.array((d.Inputs ?? []).map((inp: any) => this.fb.group({ Name: [inp.Name ?? ''], Value: [inp.Value ?? ''] }))),
-      Outputs: this.fb.array((d.Outputs ?? []).map((out: any) => this.fb.group({ Name: [out.Name ?? ''], Value: [out.Value ?? ''] }))),
+      Inputs: this.fb.array((d.Inputs ?? []).map((inp: any) => this.fb.group({ Name: adminState(inp.Name ?? ''), Value: adminState(inp.Value ?? '') }))),
+      Outputs: this.fb.array((d.Outputs ?? []).map((out: any) => this.fb.group({ Name: adminState(out.Name ?? ''), Value: adminState(out.Value ?? '') }))),
     });
   }
 
@@ -479,11 +527,13 @@ export class EditPage2 {
   }
 
   private buildGainGroup(key: string = '', g: any = {}): FormGroup {
+    const structState = (v: any) => this.canEditStructure ? [v] : [{ value: v, disabled: true }];
     return this.fb.group({
-      key: [key],
+      key: structState(key),
       Label: [g.Label ?? ''],
-      ControlId: [g.ControlId ?? null],
+      ControlId: structState(g.ControlId ?? null),
       IsInvisible: [g.IsInvisible ?? false],
+      Phantom48v: [g.Phantom48v ?? false],
       Min: [g.Min ?? -50],
       Max: [g.Max ?? -10],
       MuteLabel: [g.MuteLabel ?? 'Mute'],
@@ -526,6 +576,9 @@ export class EditPage2 {
   
       this.roomId = id;
       this.fetchRoom();
+      this.form.valueChanges.subscribe(() => {
+        if (this.form.dirty) this.navGuard.setDirty(true);
+      });
     }
   
     /** Convenience getters used by the template */
@@ -682,8 +735,8 @@ export class EditPage2 {
   
       const controls: Record<string, any> = {};
       for (const f of fields) {
-        const v = s[f.key] ?? (f.kind === 'number' ? null : '');
-        controls[f.key] = f.required ? [v, Validators.required] : [v];
+        const v = s[f.key] ?? f.default ?? (f.kind === 'number' ? null : '');
+        controls[f.key] = [v];
       }
   
       return this.fb.group(controls);
@@ -704,45 +757,85 @@ export class EditPage2 {
         params: this.buildParamsGroup(type, seedWithoutAction),
       });
   
+      // Auto-fill select fields that have exactly one option
+      const autoFill = (g: FormGroup, actionType: ActionType) => {
+        const params = g.get('params') as FormGroup;
+        if (!params) return;
+        const specs = this.actionSpecs[actionType] ?? [];
+        for (const spec of specs) {
+          if (spec.kind !== 'select' || !spec.options) continue;
+          const ctrl = params.get(spec.key);
+          if (!ctrl || ctrl.value) continue;
+          // Build a proxy group so options fn can read already-filled sibling values
+          const proxy = { get: (k: string) => params.get(k) } as any;
+          const opts = spec.options(this.ctx(), proxy);
+          if (opts.length === 1) {
+            ctrl.setValue(opts[0].value, { emitEvent: true });
+          }
+        }
+      };
+
+      // Subscribe to params value changes to ensure form is marked dirty
+      const subscribeParamsDirty = (params: FormGroup) => {
+        params.valueChanges.subscribe(() => {
+          this.form.markAsDirty();
+        });
+      };
+
       // Wire device changes for every action instance
       const wireDeviceChanges = (g: FormGroup) => {
         const params = g.get('params') as FormGroup;
         if (!params) return;
-  
+
+        subscribeParamsDirty(params);
+
         const deviceCtrl = params.get('device');
         if (!deviceCtrl) return;
-  
+
         deviceCtrl.valueChanges.subscribe(() => {
           const inputCtrl = params.get('input');
           const outputCtrl = params.get('output');
 
           if (inputCtrl) inputCtrl.setValue(null);
           if (outputCtrl) outputCtrl.setValue(null);
+
+          // After device selected, auto-fill input/output if only one option
+          const currentType = g.get('action')?.value as ActionType;
+          if (currentType) setTimeout(() => autoFill(g, currentType));
         });
       };
-  
+
       wireDeviceChanges(group);
-  
-      // When action type changes, always rebuild params group from latest schema
+
+      // Auto-fill on initial creation (ctx is populated before createActionGroup is called)
+      autoFill(group, type);
+
+      // When action type changes, patch params in-place (never replace the group instance)
       group.get('action')!.valueChanges.subscribe((newType) => {
-        const oldParams = group.get('params');
+        const params = group.get('params') as FormGroup;
+        if (!params) return;
 
-        // Build a fresh params group from the schema
-        const newParams = this.buildParamsGroup(newType);
+        const newFields = this.actionSpecs[newType] ?? [];
+        const newKeys = new Set(newFields.map((f) => f.key));
 
-        // Remove the old params control first to avoid Angular keeping stale references
-        if (oldParams) {
-          (group as any).removeControl('params');
-        }
+        // Remove controls that don't belong to the new action type
+        Object.keys(params.controls).forEach((key) => {
+          if (!newKeys.has(key)) params.removeControl(key, { emitEvent: false });
+        });
 
-        // Add the new params group
-        group.addControl('params', newParams);
+        // Add controls that are missing
+        newFields.forEach((f) => {
+          if (!params.contains(f.key)) {
+            const v = f.kind === 'number' ? null : '';
+            params.addControl(f.key, this.fb.control(v), { emitEvent: false });
+          }
+        });
 
-        // Trigger validation / change detection
-        newParams.updateValueAndValidity({ emitEvent: true });
+        params.updateValueAndValidity({ emitEvent: true });
+        this.form.markAsDirty();
 
-        // Re-wire device change logic after params group is rebuilt
         wireDeviceChanges(group);
+        autoFill(group, newType);
       });
   
       return group;
@@ -772,9 +865,15 @@ export class EditPage2 {
             this.createActionGroup(a)
           )
         ),
+        HoldActions: this.fb.array(
+          (Array.isArray(s?.HoldActions) ? s.HoldActions : []).map((a: any) =>
+            this.createActionGroup(a)
+          )
+        ),
+        HasHoldActions: [Array.isArray(s?.HoldActions) && s.HoldActions.length > 0],
       });
     }
-  
+
   addSource(): void {
     const nextIndex = this.sources.length + 1;
     const key = `Source_${nextIndex}_Btn`;
@@ -828,9 +927,32 @@ export class EditPage2 {
     return this.sources.at(sourceIndex)?.get('Actions') as FormArray;
   }
 
+  getSourceHoldActionsArray(sourceIndex: number): FormArray {
+    return this.sources.at(sourceIndex)?.get('HoldActions') as FormArray;
+  }
+
+  addSourceHoldAction(sourceIndex: number): void {
+    this.getSourceHoldActionsArray(sourceIndex)?.push(this.createActionGroup());
+    this.markDirty();
+  }
+
+  removeSourceHoldAction(sourceIndex: number, actionIndex: number): void {
+    this.getSourceHoldActionsArray(sourceIndex)?.removeAt(actionIndex);
+    this.markDirty();
+  }
+
   dropSourceAction(sourceIndex: number, event: CdkDragDrop<any[]>): void {
     if (event.previousIndex === event.currentIndex) return;
     const arr = this.getSourceActionsArray(sourceIndex);
+    const control = arr.at(event.previousIndex);
+    arr.removeAt(event.previousIndex, { emitEvent: false });
+    arr.insert(event.currentIndex, control, { emitEvent: false });
+    this.markDirty();
+  }
+
+  dropSourceHoldAction(sourceIndex: number, event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const arr = this.getSourceHoldActionsArray(sourceIndex);
     const control = arr.at(event.previousIndex);
     arr.removeAt(event.previousIndex, { emitEvent: false });
     arr.insert(event.currentIndex, control, { emitEvent: false });
@@ -881,8 +1003,9 @@ export class EditPage2 {
   private buildPageGroup(seed: any = {}): FormGroup {
     const componentsObj = (seed.Components && typeof seed.Components === 'object' && !Array.isArray(seed.Components))
       ? seed.Components : {};
+    const structState = (v: any) => this.canEditStructure ? [v] : [{ value: v, disabled: true }];
     return this.fb.group({
-      Id:          [seed.Id ?? ''],
+      Id:          structState(seed.Id ?? ''),
       Title:       [seed.Title ?? ''],
       Subtitle:    [seed.Subtitle ?? ''],
       Description: [seed.Description ?? ''],
@@ -959,17 +1082,22 @@ export class EditPage2 {
 
   private buildComponentGroup(key: string, seed: any = {}): FormGroup {
     const propsObj = seed.Properties ?? {};
+    const structState = (v: any) => this.canEditStructure ? [v] : [{ value: v, disabled: true }];
     return this.fb.group({
-      Key:         [key],
+      Key:         structState(key),
       IsInvisible: [seed.IsInvisible ?? false],
       Properties:  this.fb.array(
         Object.entries(propsObj).map(([k, v]) =>
-          this.fb.group({ key: [k], value: [v] })
+          this.fb.group({ key: structState(k), value: [v] })
         )
       ),
       Actions: this.fb.array(
         (Array.isArray(seed.Actions) ? seed.Actions : []).map((a: any) => this.createActionGroup(a))
       ),
+      HoldActions: this.fb.array(
+        (Array.isArray(seed.HoldActions) ? seed.HoldActions : []).map((a: any) => this.createActionGroup(a))
+      ),
+      HasHoldActions: [Array.isArray(seed.HoldActions) && seed.HoldActions.length > 0],
     });
   }
 
@@ -1009,6 +1137,29 @@ export class EditPage2 {
 
   getComponentActionsArray(pageIndex: number, compIndex: number): FormArray {
     return this.getPageComponentsArray(pageIndex)?.at(compIndex)?.get('Actions') as FormArray;
+  }
+
+  getComponentHoldActionsArray(pageIndex: number, compIndex: number): FormArray {
+    return this.getPageComponentsArray(pageIndex)?.at(compIndex)?.get('HoldActions') as FormArray;
+  }
+
+  addComponentHoldAction(pageIndex: number, compIndex: number): void {
+    this.getComponentHoldActionsArray(pageIndex, compIndex)?.push(this.createActionGroup());
+    this.markDirty();
+  }
+
+  removeComponentHoldAction(pageIndex: number, compIndex: number, actionIndex: number): void {
+    this.getComponentHoldActionsArray(pageIndex, compIndex)?.removeAt(actionIndex);
+    this.markDirty();
+  }
+
+  dropComponentHoldAction(pageIndex: number, compIndex: number, event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const arr = this.getComponentHoldActionsArray(pageIndex, compIndex);
+    const control = arr.at(event.previousIndex);
+    arr.removeAt(event.previousIndex, { emitEvent: false });
+    arr.insert(event.currentIndex, control, { emitEvent: false });
+    this.markDirty();
   }
 
   getComponentPropertiesArray(pageIndex: number, compIndex: number): FormArray {
@@ -1094,6 +1245,11 @@ export class EditPage2 {
   
     private markDirty(): void {
       this.form.markAsDirty();
+      this.navGuard.setDirty(true);
+    }
+
+    ngOnDestroy(): void {
+      this.navGuard.setDirty(false);
     }
 
     addSystemOnAction(): void {
@@ -1131,9 +1287,227 @@ export class EditPage2 {
     goBack(): void {
       this.router.navigate(['/monitor']);
     }
+
+    confirmDelete(): void {
+      const building = this.form.get('building')?.value ?? '';
+      const room = this.form.get('room')?.value ?? '';
+      const expected = `${building} ${room}`.trim();
+      if (this.deleteConfirmBuilding().trim() !== expected) {
+        this.deleteError.set('Name does not match. Please try again.');
+        return;
+      }
+      this.deleting.set(true);
+      this.deleteError.set(null);
+      this.http.delete(
+        `${this.apiBase()}/rooms/${this.roomId}`,
+        { headers: { Authorization: `Bearer ${this.auth.token()}` } }
+      ).subscribe({
+        next: () => this.router.navigate(['/monitor']),
+        error: () => {
+          this.deleteError.set('Failed to delete room. Please try again.');
+          this.deleting.set(false);
+        },
+      });
+    }
+
+    saveAsTemplate(): void {
+      this.showSaveTemplateModal.set(true);
+      this.templateName.set('');
+      this.saveTemplateError.set(null);
+    }
+
+    confirmSaveTemplate(): void {
+      const name = this.templateName().trim();
+      if (!name) { this.saveTemplateError.set('Template name is required.'); return; }
+
+      this.savingTemplate.set(true);
+      this.saveTemplateError.set(null);
+
+      const raw = this.form.getRawValue() as any;
+
+      const flattenActions = (list: any[]) =>
+        (Array.isArray(list) ? list : []).map((row: any) => ({ action: row?.action, ...(row?.params ?? {}) }));
+
+      const flattenSource = (s: any) => ({
+        ...s,
+        Actions: flattenActions(s?.Actions),
+        HoldActions: flattenActions(s?.HoldActions),
+      });
+
+      const serializeComponents = (compsArray: any[]) =>
+        (Array.isArray(compsArray) ? compsArray : []).reduce((acc: any, c: any) => {
+          const key = c.Key; if (!key) return acc;
+          const props = (Array.isArray(c.Properties) ? c.Properties : []).reduce((pa: any, p: any) => { if (p.key) pa[p.key] = p.value; return pa; }, {});
+          acc[key] = { IsInvisible: c.IsInvisible, Properties: props, Actions: flattenActions(c.Actions), HoldActions: flattenActions(c.HoldActions), Control: {} };
+          return acc;
+        }, {});
+
+      const config = {
+        ...raw,
+        SystemOnActions: flattenActions(raw.SystemOnActions),
+        SystemOffActions: flattenActions(raw.SystemOffActions),
+        Sources: (Array.isArray(raw.Sources) ? raw.Sources : []).reduce((acc: any, s: any) => {
+          const key = s.Key || s.Control; if (!key) return acc;
+          const { Key, ...rest } = flattenSource(s); acc[key] = rest; return acc;
+        }, {}),
+        Devices: (Array.isArray(raw.Devices) ? raw.Devices : []).reduce((acc: any, d: any) => {
+          const key = d.key; if (!key) return acc;
+          const { key: _, Interfaces, ...rest } = d;
+          acc[key] = { ...rest, Interfaces: Object.entries(Interfaces ?? {}).filter(([, v]) => v).map(([k]) => k) }; return acc;
+        }, {}),
+        Gains: (Array.isArray(raw.Gains) ? raw.Gains : []).reduce((acc: any, g: any) => {
+          const key = g.key; if (!key) return acc; const { key: _, ...rest } = g; acc[key] = rest; return acc;
+        }, {}),
+        Pages: (Array.isArray(raw.Pages) ? raw.Pages : []).map((p: any) => ({
+          Id: p.Id, Title: p.Title, Subtitle: p.Subtitle, Description: p.Description,
+          Text: p.Text, Image: p.Image, Actions: flattenActions(p.Actions), Components: serializeComponents(p.Components),
+        })),
+      };
+
+      this.http.post(`${this.apiBase()}/templates`, { name, permission: 'user', config }, { headers: { Authorization: `Bearer ${this.auth.token()}` } }).subscribe({
+        next: () => {
+          this.savingTemplate.set(false);
+          this.showSaveTemplateModal.set(false);
+        },
+        error: (err: any) => {
+          this.savingTemplate.set(false);
+          this.saveTemplateError.set(err?.error?.error || err?.message || 'Failed to save template.');
+        },
+      });
+    }
+
+    loadTemplate(): void {
+      this.showTemplateModal.set(true);
+      this.templatesLoading.set(true);
+      this.templatesError.set(null);
+      this.http.get<{ _id: string; name: string; icon: string; createdby: string; created: string; permission: string }[]>(
+        `${this.apiBase()}/templates`,
+        { headers: { Authorization: `Bearer ${this.auth.token()}` } }
+      ).subscribe({
+        next: (data) => { this.templates.set(data); this.templatesLoading.set(false); },
+        error: (err: any) => {
+          this.templatesError.set(err?.error?.error || err?.message || 'Failed to load templates.');
+          this.templatesLoading.set(false);
+        },
+      });
+    }
+
+    closeTemplateModal(): void {
+      this.showTemplateModal.set(false);
+    }
+
+    applyTemplate(template: { _id: string; name: string }): void {
+      this.showTemplateModal.set(false);
+      this.http.get<{ _id: string; name: string; config: any }>(
+        `${this.apiBase()}/templates/${template._id}`,
+        { headers: { Authorization: `Bearer ${this.auth.token()}` } }
+      ).subscribe({
+        next: (doc) => {
+          const config = doc.config;
+          if (!config) return;
+          // Preserve building/room/campus/ip — only load non-identity fields from template
+          this.systemOnActions.clear();
+          (config.SystemOnActions ?? []).forEach((a: any) => this.addActionFromConfig(this.systemOnActions, a));
+          this.systemOffActions.clear();
+          (config.SystemOffActions ?? []).forEach((a: any) => this.addActionFromConfig(this.systemOffActions, a));
+          this.devices.clear();
+          this.expandedDevices.set(new Set());
+          Object.entries(config.Devices ?? {}).forEach(([key, d]) => this.devices.push(this.buildDeviceGroup(key, d)));
+          this.syncCtxDevices();
+          this.gains.clear();
+          this.expandedGains.set(new Set());
+          Object.entries(config.Gains ?? {}).forEach(([key, g]: [string, any]) => this.gains.push(this.buildGainGroup(key, g)));
+          this.syncCtxGains();
+          this.pages.clear();
+          this.expandedPages.set(new Set());
+          this.expandedComponents.set(new Set());
+          (Array.isArray(config.Pages) ? config.Pages : []).forEach((p: any) => this.pages.push(this.buildPageGroup(p)));
+          this.form.markAsDirty();
+        },
+      });
+    }
+
+    private addActionFromConfig(arr: any, a: any): void {
+      const { action, ...params } = a;
+      const fields = this.actionSpecs[action as ActionType] ?? [];
+      const paramsGroup = this.fb.group(
+        Object.fromEntries(fields.map((f: any) => [f.key, [params[f.key] ?? null]]))
+      );
+      arr.push(this.fb.group({ action: [action], params: paramsGroup }));
+    }
+
+    syncToCore(): void {
+      this.http.post(
+        `${this.apiBase()}/rooms/${this.roomId}/sync`,
+        {},
+        { headers: { Authorization: `Bearer ${this.auth.token()}` } }
+      ).subscribe({
+        next: () => alert('Sync request sent to core.'),
+        error: () => alert('Failed to send sync request.'),
+      });
+    }
   
+    private validateActionParams(): string | null {
+      const checkArray = (actions: any[], label: string): string | null => {
+        for (let i = 0; i < actions.length; i++) {
+          const row = actions[i];
+          const actionType = row?.action as ActionType;
+          if (!actionType) continue;
+          const specs = this.actionSpecs[actionType] ?? [];
+          for (const spec of specs) {
+            if (!spec.required) continue;
+            const val = row?.params?.[spec.key];
+            if (val === null || val === '' || val === undefined) {
+              return `${label} action ${i + 1}: "${spec.label}" is required.`;
+            }
+          }
+        }
+        return null;
+      };
+
+      const raw = this.form.getRawValue() as any;
+
+return (
+        checkArray(raw.SystemOnActions ?? [], 'System On') ??
+        checkArray(raw.SystemOffActions ?? [], 'System Off') ??
+        (() => {
+          for (let si = 0; si < (raw.Sources ?? []).length; si++) {
+            const err = checkArray(raw.Sources[si]?.Actions ?? [], `Source ${si + 1}`) ??
+                        checkArray(raw.Sources[si]?.HoldActions ?? [], `Source ${si + 1} Hold`);
+            if (err) return err;
+          }
+          return null;
+        })() ??
+        (() => {
+          for (let pi = 0; pi < (raw.Pages ?? []).length; pi++) {
+            const err = checkArray(raw.Pages[pi]?.Actions ?? [], `Page ${pi + 1}`);
+            if (err) return err;
+            for (let ci = 0; ci < (raw.Pages[pi]?.Components ?? []).length; ci++) {
+              const err2 = checkArray(raw.Pages[pi].Components[ci]?.Actions ?? [], `Page ${pi + 1} Component ${ci + 1}`) ??
+                           checkArray(raw.Pages[pi].Components[ci]?.HoldActions ?? [], `Page ${pi + 1} Component ${ci + 1} Hold`);
+              if (err2) return err2;
+            }
+          }
+          return null;
+        })()
+      );
+    }
+
     onSave(): void {
-      if (this.form.invalid || this.saving()) return;
+      if (this.saving()) return;
+
+      if (this.form.invalid) {
+        this.saveError.set('Please fill in all required fields (Campus, Building, Room, IP).');
+        return;
+      }
+
+      const paramError = this.validateActionParams();
+      if (paramError) {
+        this.saveError.set(paramError);
+        return;
+      }
+
+      this.saveError.set(null);
   
       this.saving.set(true);
   
@@ -1148,6 +1522,7 @@ export class EditPage2 {
       const flattenSource = (s: any) => ({
         ...s,
         Actions: flattenActions(s?.Actions),
+        HoldActions: flattenActions(s?.HoldActions),
       });
   
       const sourcesArray = Array.isArray(raw.Sources) ? raw.Sources : [];
@@ -1183,6 +1558,7 @@ export class EditPage2 {
             IsInvisible: c.IsInvisible,
             Properties: props,
             Actions: flattenActions(c.Actions),
+            HoldActions: flattenActions(c.HoldActions),
             Control: {},
           };
           return acc;
@@ -1222,7 +1598,9 @@ export class EditPage2 {
         next: () => {
           this.saving.set(false);
           this.saveSuccess.set(true);
+          this.saveError.set(null);
           this.form.markAsPristine();
+          this.navGuard.setDirty(false);
           setTimeout(() => this.saveSuccess.set(false), 2000);
         },
         error: (err: HttpErrorResponse) => {

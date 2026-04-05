@@ -38,3 +38,65 @@ body {
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-confirm {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.modal-confirm-message {
+  font-size: 1.05rem;
+  font-weight: 500;
+  margin: 0;
+  text-align: center;
+}
+
+.modal-confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+
+  button {
+    flex: 1;
+    margin: 0;
+  }
+}
+
+.modal-confirm-sub {
+  font-size: 0.9rem;
+  color: #555;
+  margin: -1rem 0 0;
+  text-align: center;
+}
+
+.modal-confirm-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+.modal-confirm-error {
+  font-size: 0.85rem;
+  color: #d32f2f;
+  margin: -0.5rem 0 0;
+}

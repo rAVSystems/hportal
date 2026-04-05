@@ -518,13 +518,97 @@
                     }
                 ]
             },
-            "NV32-1": {
-                "FriendlyName": "Instructor NV32",
+            "NV-32-H-1": {
+                "FriendlyName": "NV32 Encoder 1",
                 "Make": "QSYS",
                 "Model": "NV-32-H",
                 "Interfaces": [
                     "switcher",
                     "encoder"
+                ],
+                "IpAddress": "",
+                "Description": "HDMI Inputs 1-3",
+                "DefaultInput": 3,
+                "Username": "",
+                "Password": "",
+                "ControlType": "qsys",
+                "Inputs": [
+                    {
+                        "Name": "HDMI 1",
+                        "Value": 1
+                    },
+                    {
+                        "Name": "HDMI 2",
+                        "Value": 2
+                    },
+                    {
+                        "Name": "HDMI 3",
+                        "Value": 3
+                    },{
+                        "Name": "Clear",
+                        "Value": 0
+                    }
+                ],
+                "Outputs": [
+                    {
+                        "Name": "HDMI 1",
+                        "Value": 1
+                    },
+                    {
+                        "Name": "HDMI 2",
+                        "Value": 2
+                    }
+                ]
+            },
+            "NV-32-H-2": {
+                "FriendlyName": "NV32 Encoder 2",
+                "Make": "QSYS",
+                "Model": "NV-32-H",
+                "Interfaces": [
+                    "switcher",
+                    "encoder"
+                ],
+                "IpAddress": "",
+                "Description": "HDMI Inputs 4-6",
+                "DefaultInput": 3,
+                "Username": "",
+                "Password": "",
+                "ControlType": "qsys",
+                "Inputs": [
+                    {
+                        "Name": "HDMI 1",
+                        "Value": 1
+                    },
+                    {
+                        "Name": "HDMI 2",
+                        "Value": 2
+                    },
+                    {
+                        "Name": "HDMI 3",
+                        "Value": 3
+                    },{
+                        "Name": "Clear",
+                        "Value": 0
+                    }
+                ],
+                "Outputs": [
+                    {
+                        "Name": "HDMI 1",
+                        "Value": 1
+                    },
+                    {
+                        "Name": "HDMI 2",
+                        "Value": 2
+                    }
+                ]
+            },
+            "NV-32-H-3": {
+                "FriendlyName": "NV32 Decoder 7",
+                "Make": "QSYS",
+                "Model": "NV-32-H",
+                "Interfaces": [
+                    "switcher",
+                    "decoder"
                 ],
                 "IpAddress": "",
                 "Description": "Video Switcher",
@@ -560,8 +644,8 @@
                     }
                 ]
             },
-            "NV21-1": {
-                "FriendlyName": "Instructor NV21",
+            "NV-21-HU-1": {
+                "FriendlyName": "NV21 Encoder 1",
                 "Make": "QSYS",
                 "Model": "NV-32-H",
                 "Interfaces": [
@@ -584,7 +668,127 @@
 
                 ]
             },
-            "NV21-2": {
+            "NV-21-HU-2": {
+                "FriendlyName": "NV21 Encoder 2",
+                "Make": "QSYS",
+                "Model": "NV-32-H",
+                "Interfaces": [
+                    "switcher",
+                    "encoder"
+                ],
+                "IpAddress": "",
+                "Description": "Input for document camera",
+                "DefaultInput": 3,
+                "Username": "",
+                "Password": "",
+                "ControlType": "qsys",
+                "Inputs": [
+                    {
+                        "Name": "HDMI 1",
+                        "Value": 1
+                    }
+                ],
+                "Outputs": [
+
+                ]
+            },
+            "NV-21-HU-3": {
+                "FriendlyName": "NV21 Encoder 3",
+                "Make": "QSYS",
+                "Model": "NV-32-H",
+                "Interfaces": [
+                    "switcher",
+                    "encoder"
+                ],
+                "IpAddress": "",
+                "Description": "Input for document camera",
+                "DefaultInput": 3,
+                "Username": "",
+                "Password": "",
+                "ControlType": "qsys",
+                "Inputs": [
+                    {
+                        "Name": "HDMI 1",
+                        "Value": 1
+                    }
+                ],
+                "Outputs": [
+
+                ]
+            },
+            "NV-1-H-WE-1": {
+                "FriendlyName": "NV1 Encoder 1",
+                "Make": "QSYS",
+                "Model": "NV-1-H-WE",
+                "Interfaces": [
+                    "switcher",
+                    "encoder"
+                ],
+                "IpAddress": "",
+                "Description": "Input for document camera",
+                "DefaultInput": 1,
+                "Username": "",
+                "Password": "",
+                "ControlType": "qsys",
+                "Inputs": [
+                    {
+                        "Name": "HDMI 1",
+                        "Value": 1
+                    }
+                ],
+                "Outputs": [
+
+                ]
+            },
+            "NV-1-H-WE-2": {
+                "FriendlyName": "NV1 Encoder 2",
+                "Make": "QSYS",
+                "Model": "NV-1-H-WE",
+                "Interfaces": [
+                    "switcher",
+                    "encoder"
+                ],
+                "IpAddress": "",
+                "Description": "Input for document camera",
+                "DefaultInput": 1,
+                "Username": "",
+                "Password": "",
+                "ControlType": "qsys",
+                "Inputs": [
+                    {
+                        "Name": "HDMI 1",
+                        "Value": 1
+                    }
+                ],
+                "Outputs": [
+
+                ]
+            },
+            "NV-1-H-WE-3": {
+                "FriendlyName": "NV1 Encoder 3",
+                "Make": "QSYS",
+                "Model": "NV-1-H-WE-3",
+                "Interfaces": [
+                    "switcher",
+                    "encoder"
+                ],
+                "IpAddress": "",
+                "Description": "Input for document camera",
+                "DefaultInput": 1,
+                "Username": "",
+                "Password": "",
+                "ControlType": "qsys",
+                "Inputs": [
+                    {
+                        "Name": "HDMI 1",
+                        "Value": 1
+                    }
+                ],
+                "Outputs": [
+
+                ]
+            },
+            "NV-21-HU-4": {
                 "FriendlyName": "Projector Video Decoder",
                 "Make": "QSYS",
                 "Model": "NV-21-HU",
@@ -611,7 +815,7 @@
                     }
                 ]
             },
-            "NV21-3": {
+            "NV-21-HU-5": {
                 "FriendlyName": "Confidence Video Decoder",
                 "Make": "QSYS",
                 "Model": "NV-21-HU",

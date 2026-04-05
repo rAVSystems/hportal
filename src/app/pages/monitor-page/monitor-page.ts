@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 
 import { AuthService } from '../../services/auth-service';
-import { RoomCard } from '../room-card/room-card';
+import { RoomCard } from '../../components/room-card/room-card';
 
 export type RoomDoc = {
   _id: string;

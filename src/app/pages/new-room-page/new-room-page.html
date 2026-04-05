@@ -87,7 +87,6 @@
             <a class="side-nav-link" (click)="scrollTo('section-devices')">Devices</a>
         </nav>
         <div class="side-nav-actions">
-            <button class="cancel-btn" mat-stroked-button type="button" (click)="onCancel()">Cancel</button>
             <button class="save-btn" mat-flat-button color="primary" type="button" (click)="onSave()" [disabled]="form.invalid || saving()">
                 @if (saving()) { Saving… } @else { Save }
             </button>
@@ -97,10 +96,13 @@
         <form class="edit-form" [formGroup]="form" (ngSubmit)="onSave()">
 
             <div class="edit-form-header">
+                <button class="back-btn" type="button" mat-icon-button (click)="onCancel()">
+                    <mat-icon>arrow_back</mat-icon>
+                </button>
                 <h2 class="edit-form-title">New Room</h2>
                 <div class="edit-form-actions">
-                    <button mat-stroked-button type="button" (click)="loadTemplate()">Load From Template</button>
-                    <button mat-stroked-button type="button" (click)="saveTemplate()">Save As Template</button>
+                    <a class="sync-link" (click)="loadTemplate()">Load From Template</a>
+                    <a class="sync-link" (click)="saveTemplate()">Save As Template</a>
                 </div>
             </div>
 
@@ -108,24 +110,25 @@
 
                 <div class="form-section" id="section-system-settings">
                     <h2 class="section-title">System Settings</h2>
+                    <div class="settings-card">
                     <div class="settings-grid">
-                        <div>
+                        <div class="table-param-field">
                             <label>Campus</label>
                             <input type="text" formControlName="campus" />
                         </div>
-                        <div>
+                        <div class="table-param-field">
                             <label>Building</label>
                             <input type="text" formControlName="building" />
                         </div>
-                        <div>
+                        <div class="table-param-field">
                             <label>Room</label>
                             <input type="text" formControlName="room" />
                         </div>
-                        <div>
+                        <div class="table-param-field">
                             <label>IP</label>
                             <input type="text" formControlName="ip" />
                         </div>
-                        <div>
+                        <div class="table-param-field">
                             <label>Room Type</label>
                             <select formControlName="roomType">
                                 @for (t of roomTypes(); track t) {
@@ -133,10 +136,11 @@
                                 }
                             </select>
                         </div>
-                        <div>
+                        <div class="table-param-field">
                             <label>Version</label>
                             <input type="number" step="0.1" formControlName="version" />
                         </div>
+                    </div>
                     </div>
                 </div>
 

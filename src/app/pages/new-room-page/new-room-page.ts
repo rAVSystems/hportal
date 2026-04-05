@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, OnDestroy, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth-service';
+import { NavigationGuardService } from '../../services/navigation-guard.service';
 import {
   FormArray,
   FormBuilder,
@@ -19,8 +20,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { IconPickerComponent } from '../icon-picker/icon-picker';
-import { Rick } from '../rick/rick';
+import { IconPickerComponent } from '../../components/icon-picker/icon-picker';
+import { Rick } from '../../components/rick/rick';
 
 type ActionType =
   | 'TurnOn'
@@ -59,7 +60,7 @@ type FieldSpec = {
 };
 
 @Component({
-  selector: 'app-new-room',
+  selector: 'app-new-room-page',
   imports: [
     CommonModule,
     FormsModule,
@@ -74,10 +75,10 @@ type FieldSpec = {
     IconPickerComponent,
     Rick,
   ],
-  templateUrl: './new-room.html',
-  styleUrl: './new-room.scss',
+  templateUrl: './new-room-page.html',
+  styleUrl: './new-room-page.scss',
 })
-export class NewRoom {
+export class NewRoomPage implements OnDestroy {
   saving = signal(false);
   errorMessage = signal<string | null>(null);
   showTemplateModal = signal(false);
@@ -327,7 +328,8 @@ export class NewRoom {
     private readonly fb: FormBuilder,
     private readonly http: HttpClient,
     private readonly router: Router,
-    private readonly auth: AuthService
+    private readonly auth: AuthService,
+    private readonly navGuard: NavigationGuardService
   ) {
     this.form = this.fb.group({
       campus: ['', Validators.required],
@@ -346,6 +348,13 @@ export class NewRoom {
 
     this.devices.valueChanges.subscribe(() => this.syncCtxDevices());
     this.gains.valueChanges.subscribe(() => this.syncCtxGains());
+    this.form.valueChanges.subscribe(() => {
+      if (this.form.dirty) this.navGuard.setDirty(true);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.navGuard.setDirty(false);
   }
 
   private syncCtxDevices(): void {
@@ -832,6 +841,7 @@ export class NewRoom {
   }
 
   confirmCancel(): void {
+    this.navGuard.setDirty(false);
     this.router.navigate(['/monitor']);
   }
 
@@ -913,6 +923,7 @@ export class NewRoom {
     this.http.post(`${apiBase}/rooms`, configToSave, { headers }).subscribe({
       next: () => {
         this.saving.set(false);
+        this.navGuard.setDirty(false);
         this.router.navigate(['/monitor']);
       },
       error: (err) => {
@@ -1058,7 +1069,7 @@ export class NewRoom {
     const token = this.auth.token();
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-    this.http.post(`${apiBase}/templates`, { name, config }, { headers }).subscribe({
+    this.http.post(`${apiBase}/templates`, { name, permission: 'user', config }, { headers }).subscribe({
       next: () => {
         this.savingTemplate.set(false);
         this.showSaveTemplateModal.set(false);

@@ -6,13 +6,11 @@
   width: 100%;
 }
 
-.edit-page {    
+.edit-page {
   width: 100%;
-  //margin: 0 auto;
   display: flex;
   flex-direction: row;
   gap: 24px;
-  //background-color: green;
 }
 
 .side-nav-bar {
@@ -32,6 +30,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  flex: 1;
 }
 
 .side-nav-link {
@@ -42,7 +41,6 @@
   color: #333;
   font-size: 0.9rem;
   font-weight: 500;
-  cursor: pointer;
   transition: background 0.15s;
 
   &:hover {
@@ -56,7 +54,7 @@
   gap: 0.5rem;
   margin-top: 1.5rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid rgba(0,0,0,0.1);
 
   .cancel-btn {
     flex: 1;
@@ -70,46 +68,50 @@
 }
 
 .form {
-    flex: 6;
-    flex-direction: column;
-    background-color: rgba(225, 225, 225, 0.794);
-    border-radius: 25px;
+  flex: 6;
+  flex-direction: column;
+  background-color: rgba(225, 225, 225, 0.794);
+  border-radius: 25px;
 }
 
 .rick-column {
-    flex: 2;
+  flex: 2;
 }
 
-.edit-form-title{
-    display: flex;
-    align-items: center;
-    flex: 0 1 auto;
-    color: rgb(0, 0, 0);
-    font-size: 30px;
-    font-weight: 400;
-    height: 100%;
-    padding-left: 1.5rem;
-    //background-color: rgba(225, 225, 225, 0.794);
+.template-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem 0;
 }
 
-
-.edit-form-actions{
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    flex: 1 1 auto;
-    //background-color: rgba(225, 225, 225, 0.794);
-    height: 100%;
-    border-radius: 0px 25px 0px 0px;
-    padding-right: 1rem;
+.edit-form-title {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  color: rgb(0, 0, 0);
+  font-size: 30px;
+  font-weight: 400;
+  height: 100%;
+  padding-left: 1.5rem;
 }
 
-.edit-form-header{
-    display: flex;
-    width: 100%;
-    border-radius: 25px 25px 0px 0px;
-    height: 80px;
-    align-items: center;
+.edit-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1 1 auto;
+  height: 100%;
+  border-radius: 0px 25px 0px 0px;
+  padding-right: 1rem;
+}
+
+.edit-form-header {
+  display: flex;
+  width: 100%;
+  border-radius: 25px 25px 0px 0px;
+  height: 80px;
+  align-items: center;
 }
 
 .back-btn {
@@ -117,132 +119,54 @@
   flex-shrink: 0;
 }
 
-.save-progress-bar {
-  height: 4px;
-  width: 100%;
-  background: linear-gradient(90deg, #1976d2 0%, #42a5f5 50%, #1976d2 100%);
-  background-size: 200% 100%;
-  animation: progress-slide 1s linear infinite;
-  border-radius: 25px 25px 0 0;
+button {
+  margin: .5rem;
 }
 
-@keyframes progress-slide {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+.form-section {
+  display: flex;
+  justify-content: flex-start;
+  flex-direction: column;
+  margin: 20px;
+  padding: 25px;
+  background-color: white;
+  border-radius: 25px;
+  overflow-x: hidden;
 }
 
-button{
-    margin: .5rem;
+.settings-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px 8px;
 }
-
-.form-general-settings{
-    display: flex;
-    justify-content: flex-start;
-    flex-direction: column;
-    margin: 20px;
-    padding: 25px 25px 25px 25px;
-    background-color: white;
-    border-radius: 25px;
-}
-
-.form-section{
-    display: flex;
-    justify-content: flex-start;
-    flex-direction: column;
-    margin: 20px;
-    padding: 25px 25px 25px 25px;
-    background-color: white;
-    border-radius: 25px;
-}
-
-/* ----------------------------------------------------
-   System Settings Grid
----------------------------------------------------- */
 
 .settings-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px 0px;
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-.settings-grid div {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
-  width: 100%;
-  //background-color: green;
-}
-
-.settings-grid label {
-  font-size: 18px;
-  font-weight: 600;
-  min-width: 115px;
-  text-align: right;
+  gap: 16px 24px;
+  margin-left: 36px;
+  margin-right: 36px;
 }
 
 .settings-grid input,
 .settings-grid select {
-  flex: 1;
-  max-width: 380px;
-  height: 42px;
-  padding: 8px 12px;
-  font-size: 16px;
+  height: 34px;
+  padding: 4px 8px;
+  font-size: 14px;
   border: 1px solid #ccc;
   border-radius: 6px;
   box-sizing: border-box;
 }
 
-/* Ensure native select matches input vertical sizing */
 .settings-grid select {
   line-height: 24px;
   appearance: auto;
 }
 
-mat-form-field{
-    margin-right: 10px;
+.section-title {
+  margin-bottom: 2rem;
 }
-
-.section-title{
-    margin-bottom: 2rem;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px 20px;
-  width: 100%;
-}
-
-.actions-section {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.action-row {
-  display: grid;
-  grid-template-columns: 2fr 2fr 2fr 1fr auto;
-  gap: 12px;
-  align-items: start;
-  background: #ffffff;
-  border-radius: 12px;
-  padding-top: 1rem;
-  padding-left: 1rem;
-  margin: 1rem;
-}
-
-.action-row mat-form-field {
-  width: 100%;
-}
-
-/* ----------------------------------------------------
-   Configuration Tables
----------------------------------------------------- */
 
 .config-table {
   width: 100%;
@@ -255,25 +179,20 @@ mat-form-field{
   padding: 12px 16px;
   font-weight: 600;
   border-bottom: 2px solid #dcdcdc;
-  //background-color: green;
 }
 
 .config-table td {
   padding: 24px;
   border-bottom: 1px solid #eeeeee;
   vertical-align: middle;
-  //background-color: blue;
 }
 
-
-/* Vertically center form fields inside the params column (3rd col now, after drag handle) */
 .config-table td:nth-child(3) {
   display: flex;
   align-items: center;
   justify-content: flex-start;
 }
 
-/* Allow parameter controls to wrap nicely */
 .table-param-list {
   width: 100%;
   display: grid;
@@ -281,7 +200,6 @@ mat-form-field{
   gap: 10px;
 }
 
-/* Match System Settings input/select styling for table controls */
 .table-param-field {
   display: flex;
   flex-direction: column;
@@ -308,14 +226,12 @@ mat-form-field{
   box-sizing: border-box;
 }
 
-/* Ensure native select aligns vertically like inputs */
 .table-param-field select,
 .config-table td select {
   line-height: 24px;
   appearance: auto;
 }
 
-/* Action column should be wide enough for action names (2nd col now, after drag handle) */
 .config-table th:nth-child(2),
 .config-table td:nth-child(2) {
   width: 260px;
@@ -323,16 +239,9 @@ mat-form-field{
   padding-right: 20px;
 }
 
-/* Ensure the action dropdown fills the column */
 .config-table td:nth-child(2) select {
   width: 100%;
   min-width: 220px;
-}
-
-.config-table mat-form-field {
-  width: 33%;
-  min-width: 220px;
-  margin-right: 0;
 }
 
 .table-add-row td {
@@ -369,10 +278,10 @@ mat-form-field{
   border-radius: 8px;
   overflow: hidden;
 
-  > .source-drag-handle  { order: 1; }
-  > .source-summary      { order: 2; flex: 1; }
+  > .source-drag-handle     { order: 1; }
+  > .source-summary         { order: 2; flex: 1; }
   > button[mat-icon-button] { order: 3; }
-  > .source-detail       { order: 4; flex-basis: 100%; }
+  > .source-detail          { order: 4; flex-basis: 100%; }
 }
 
 .source-drag-handle {
@@ -530,6 +439,113 @@ mat-form-field{
   transition: transform 200ms ease;
 }
 
+
+.modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 820px;
+  max-width: 92vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #eee;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+}
+
+.modal-body {
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-error {
+  color: #c00;
+}
+
+.template-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  thead tr {
+    background: #f5f6fa;
+    border-bottom: 2px solid #e0e0e0;
+
+    th {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+  }
+}
+
+.template-row {
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #f0f4ff;
+  }
+
+  td {
+    padding: 0.85rem 1rem;
+    font-size: 0.95rem;
+    vertical-align: middle;
+  }
+}
+
+.template-icon-cell {
+  width: 48px;
+}
+
+.template-mat-icon {
+  color: #7c9ef5;
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+}
+
+.template-name-cell {
+  font-weight: 600;
+}
+
+.template-createdby-cell {
+  color: #555;
+}
+
+.template-date-cell {
+  color: #888;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.template-permission {
+  font-size: 0.75rem;
+  color: #fff;
+  background: #7c9ef5;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  text-transform: capitalize;
+}
+
 /* ── Device table ── */
 .device-table {
   table-layout: fixed;
@@ -544,6 +560,7 @@ mat-form-field{
     vertical-align: middle;
   }
 
+  // override the nth-child flex rule for device rows
   td:nth-child(2) {
     display: table-cell;
   }
@@ -569,7 +586,14 @@ mat-form-field{
   box-sizing: border-box;
   width: 100%;
 
-  &.full { width: 100%; }
+  &.half {
+    width: calc(50% - 4px);
+    &:first-of-type { margin-right: 8px; }
+  }
+
+  &.full {
+    width: 100%;
+  }
 }
 
 .inline-select {
@@ -704,40 +728,22 @@ mat-form-field{
     }
   }
 }
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
 
-.modal-confirm {
-  background: white;
-  border-radius: 16px;
-  padding: 2rem;
-  width: 360px;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-}
 
-.modal-confirm-message {
-  font-size: 1.05rem;
+.sync-link {
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
   font-weight: 500;
-  margin: 0;
-  text-align: center;
-}
+  color: #333;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+  flex-shrink: 0;
 
-.modal-confirm-actions {
-  display: flex;
-  gap: 0.75rem;
-
-  button {
-    flex: 1;
-    margin: 0;
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.07);
   }
 }

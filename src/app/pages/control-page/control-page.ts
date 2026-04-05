@@ -6,12 +6,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 
 @Component({
-  selector: 'app-control',
+  selector: 'app-control-page',
   imports: [CommonModule, MatIconModule, MatButtonModule],
-  templateUrl: './control.html',
-  styleUrl: './control.scss',
+  templateUrl: './control-page.html',
+  styleUrl: './control-page.scss',
 })
-export class Control implements OnInit {
+export class ControlPage implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private sanitizer = inject(DomSanitizer);

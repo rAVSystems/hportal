@@ -51,6 +51,10 @@ export class AuthService {
     localStorage.setItem(this.userKey, JSON.stringify(auth.user));
   }
 
+  updateAuth(auth: AuthResponse) {
+    this.saveAuth(auth);
+  }
+
   logout() {
     this.tokenSig.set(null);
     this.userSig.set(null);

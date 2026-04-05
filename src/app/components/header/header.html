@@ -1,18 +1,36 @@
 
+@if (showNavConfirm()) {
+  <div class="modal-backdrop" (click)="cancelNavConfirm()">
+    <div class="modal-confirm" (click)="$event.stopPropagation()">
+      <p class="modal-confirm-message">Unsaved changes will be lost. Continue?</p>
+      <div class="modal-confirm-actions">
+        <button mat-stroked-button type="button" (click)="cancelNavConfirm()">Stay</button>
+        <button mat-flat-button color="warn" type="button" (click)="confirmNav()">Leave</button>
+      </div>
+    </div>
+  </div>
+}
+
 <div class="container">
   <mat-toolbar>
     <span class="logo">r</span>
     <span class="title">AV Portal</span>
 
+    @if (auth.isLoggedIn()) {
+      <a class="nav-link nav-link-main" (click)="navTo('/monitor', $event)" href="#">Dashboard</a>
+      <a class="nav-link" (click)="navTo('/reports', $event)" href="#">Reports</a>
+    }
+
     <span class="example-spacer"></span>
 
     @if (auth.hasRole('admin')) {
-      <a class="nav-link" routerLink="/admin/users">Manage Users</a>
+      <a class="nav-link" routerLink="/admin/users">Users</a>
+      <a class="nav-link" routerLink="/admin/templates">Templates</a>
     }
 
-    <span class="user-logged-in">
+    <a class="user-logged-in" routerLink="/profile">
       {{ auth.user()?.username || '' }}
-    </span>
+    </a>
 
     @if (auth.isLoggedIn()) {
       <button
