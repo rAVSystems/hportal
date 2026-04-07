@@ -122,7 +122,19 @@ tr:hover .edit-icon { opacity: 1; }
   white-space: nowrap;
 }
 
-.actions-cell { min-width: 120px; }
+.actions-cell {
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-btn, .delete-btn {
+  font-size: 0.8rem;
+  height: 28px;
+  line-height: 28px;
+  padding: 0 12px;
+}
 
 .delete-btn {
   font-size: 0.8rem;

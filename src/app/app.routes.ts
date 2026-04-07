@@ -8,6 +8,7 @@ import { ControlPage } from './pages/control-page/control-page';
 import { AdminUserManagementPage } from './pages/admin-user-management-page/admin-user-management-page';
 import { AdminTemplateManagementPage } from './pages/admin-template-management-page/admin-template-management-page';
 import { UserProfilePage } from './pages/user-profile-page/user-profile-page';
+import { ReportsPage } from './pages/reports-page/reports-page';
 import { authGuard } from './guards/auth.guard';
 import { adminGuard } from './guards/admin.guard';
 
@@ -17,9 +18,11 @@ export const routes: Routes = [
   { path: 'register', component: NewUserPage },
   { path: 'monitor', component: MonitorPage, canActivate: [authGuard] },
   { path: 'edit/:id', component: EditPage, canActivate: [authGuard] },
+  { path: 'edit-template/:id', component: EditPage, canActivate: [authGuard] },
   { path: 'newroom', component: NewRoomPage, canActivate: [authGuard] },
   { path: 'control/:roomId/:ip', component: ControlPage, canActivate: [authGuard] },
   { path: 'admin/users', component: AdminUserManagementPage, canActivate: [adminGuard] },
   { path: 'admin/templates', component: AdminTemplateManagementPage, canActivate: [adminGuard] },
   { path: 'profile', component: UserProfilePage, canActivate: [authGuard] },
+  { path: 'reports', component: ReportsPage, canActivate: [authGuard] },
 ];

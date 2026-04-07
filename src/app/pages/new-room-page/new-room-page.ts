@@ -31,7 +31,10 @@ type ActionType =
   | 'ShowPage'
   | 'HidePage'
   | 'StartAutoshutdown'
-  | 'SetGain';
+  | 'SetGain'
+  | 'SetCameraPreset'
+  | 'RecallCameraPreset'
+  | 'RecallSnapshot';
 
 type Option = { value: string; label: string };
 
@@ -54,6 +57,7 @@ type FieldSpec = {
   label: string;
   kind: 'text' | 'number' | 'select';
   required?: boolean;
+  default?: any;
   min?: number;
   max?: number;
   options?: (ctx: EditorContext, group?: FormGroup) => Option[];
@@ -119,6 +123,11 @@ export class NewRoomPage implements OnDestroy {
   private syncCtxGains(): void {
     const gainIds = this.gainControls.map(g => g.get('key')?.value ?? '').filter(Boolean);
     this.ctx.update(c => ({ ...c, gainIds }));
+  }
+
+  private syncCtxPages(): void {
+    const pageIds = this.pageControls.map(g => g.get('Id')?.value ?? '').filter(Boolean);
+    this.ctx.update(c => ({ ...c, pageIds }));
   }
 
   private buildGainGroup(key: string = '', g: any = {}): FormGroup {
@@ -271,7 +280,7 @@ export class NewRoomPage implements OnDestroy {
       },
     ],
     TogglePage: [
-      { key: 'page', label: 'UI', kind: 'text', required: true },
+      { key: 'page', label: 'UI', kind: 'select', required: true, default: 'In-Room', options: () => [{ value: 'In-Room', label: 'In-Room' }, { value: 'Advanced', label: 'Advanced' }] },
       {
         key: 'layer', label: 'Page', kind: 'select',
         options: (c) => c.pageIds.map((p) => ({ value: p, label: p })),
@@ -282,7 +291,7 @@ export class NewRoomPage implements OnDestroy {
       },
     ],
     ShowPage: [
-      { key: 'page', label: 'UI', kind: 'text', required: true },
+      { key: 'page', label: 'UI', kind: 'select', required: true, default: 'In-Room', options: () => [{ value: 'In-Room', label: 'In-Room' }, { value: 'Advanced', label: 'Advanced' }] },
       {
         key: 'layer', label: 'Page', kind: 'select',
         options: (c) => c.pageIds.map((p) => ({ value: p, label: p })),
@@ -293,7 +302,7 @@ export class NewRoomPage implements OnDestroy {
       },
     ],
     HidePage: [
-      { key: 'page', label: 'UI', kind: 'text', required: true },
+      { key: 'page', label: 'UI', kind: 'select', required: true, default: 'In-Room', options: () => [{ value: 'In-Room', label: 'In-Room' }, { value: 'Advanced', label: 'Advanced' }] },
       {
         key: 'layer', label: 'Page', kind: 'select',
         options: (c) => c.pageIds.map((p) => ({ value: p, label: p })),
@@ -315,6 +324,33 @@ export class NewRoomPage implements OnDestroy {
         options: (c) => c.gainIds.map((g) => ({ value: g, label: g })),
       },
       { key: 'level', label: 'Level', kind: 'number', required: true, min: 0, max: 100 },
+    ],
+    SetCameraPreset: [
+      {
+        key: 'camera', label: 'Camera', kind: 'select', required: true,
+        options: (c) => [
+          { value: 'selected', label: 'Selected Camera' },
+          ...c.allDevices
+            .filter(d => d.interfaces.some(i => i.toLowerCase() === 'camera'))
+            .map(d => ({ value: d.id, label: d.friendlyName || d.id })),
+        ],
+      },
+      { key: 'preset', label: 'Preset', kind: 'text', required: true },
+    ],
+    RecallCameraPreset: [
+      {
+        key: 'camera', label: 'Camera', kind: 'select', required: true,
+        options: (c) => [
+          { value: 'selected', label: 'Selected Camera' },
+          ...c.allDevices
+            .filter(d => d.interfaces.some(i => i.toLowerCase() === 'camera'))
+            .map(d => ({ value: d.id, label: d.friendlyName || d.id })),
+        ],
+      },
+      { key: 'preset', label: 'Preset', kind: 'text', required: true },
+    ],
+    RecallSnapshot: [
+      { key: 'snapshot', label: 'Snapshot', kind: 'text', required: true },
     ],
   };
 
@@ -348,6 +384,7 @@ export class NewRoomPage implements OnDestroy {
 
     this.devices.valueChanges.subscribe(() => this.syncCtxDevices());
     this.gains.valueChanges.subscribe(() => this.syncCtxGains());
+    this.pages.valueChanges.subscribe(() => this.syncCtxPages());
     this.form.valueChanges.subscribe(() => {
       if (this.form.dirty) this.navGuard.setDirty(true);
     });
@@ -398,21 +435,38 @@ export class NewRoomPage implements OnDestroy {
     const s = seed ?? {};
     const controls: Record<string, any> = {};
     for (const f of fields) {
-      const v = s[f.key] ?? (f.kind === 'number' ? null : '');
+      const v = s[f.key] ?? f.default ?? (f.kind === 'number' ? null : '');
       controls[f.key] = f.required ? [v, Validators.required] : [v];
     }
     return this.fb.group(controls);
   }
 
   private createActionGroup(seed?: any): FormGroup {
-    const type: ActionType = (seed?.action as ActionType) ?? 'TurnOn';
+    const s = seed ?? {};
+    const type = (s.action || 'TurnOn') as ActionType;
+    const { action, ...seedWithoutAction } = s;
+
     const group = this.fb.group({
       action: this.fb.control<ActionType>(type, {
         nonNullable: true,
         validators: [Validators.required],
       }),
-      params: this.buildParamsGroup(type, seed?.params ?? seed),
+      params: this.buildParamsGroup(type, seedWithoutAction),
     });
+
+    const autoFill = (g: FormGroup, actionType: ActionType) => {
+      const params = g.get('params') as FormGroup;
+      if (!params) return;
+      const specs = this.actionSpecs[actionType] ?? [];
+      for (const spec of specs) {
+        if (spec.kind !== 'select' || !spec.options) continue;
+        const ctrl = params.get(spec.key);
+        if (!ctrl || ctrl.value) continue;
+        const proxy = { get: (k: string) => params.get(k) } as any;
+        const opts = spec.options(this.ctx(), proxy);
+        if (opts.length === 1) ctrl.setValue(opts[0].value, { emitEvent: true });
+      }
+    };
 
     const wireDeviceChanges = (g: FormGroup) => {
       const params = g.get('params') as FormGroup;
@@ -424,17 +478,35 @@ export class NewRoomPage implements OnDestroy {
         const outputCtrl = params.get('output');
         if (inputCtrl) inputCtrl.setValue(null);
         if (outputCtrl) outputCtrl.setValue(null);
+        const currentType = g.get('action')?.value as ActionType;
+        if (currentType) setTimeout(() => autoFill(g, currentType));
       });
     };
 
     wireDeviceChanges(group);
+    autoFill(group, type);
 
     group.get('action')!.valueChanges.subscribe((newType) => {
-      (group as any).removeControl('params');
-      const newParams = this.buildParamsGroup(newType);
-      group.addControl('params', newParams);
-      newParams.updateValueAndValidity({ emitEvent: true });
+      const params = group.get('params') as FormGroup;
+      if (!params) return;
+
+      const newFields = this.actionSpecs[newType] ?? [];
+      const newKeys = new Set(newFields.map((f) => f.key));
+
+      Object.keys(params.controls).forEach((key) => {
+        if (!newKeys.has(key)) params.removeControl(key, { emitEvent: false });
+      });
+
+      newFields.forEach((f) => {
+        if (!params.contains(f.key)) {
+          const v = f.default ?? (f.kind === 'number' ? null : '');
+          params.addControl(f.key, this.fb.control(v), { emitEvent: false });
+        }
+      });
+
+      params.updateValueAndValidity({ emitEvent: true });
       wireDeviceChanges(group);
+      autoFill(group, newType);
     });
 
     return group;
@@ -485,8 +557,15 @@ export class NewRoomPage implements OnDestroy {
       AutoShutdown: [s.AutoShutdown ?? false],
       Order: [s.Order ?? 0],
       Group: [s.Group ?? 'Sources'],
+      HasActions: [Array.isArray(s?.Actions) && s.Actions.length > 0],
       Actions: this.fb.array(
         (Array.isArray(s?.Actions) ? s.Actions : []).map((a: any) =>
+          this.createActionGroup(a)
+        )
+      ),
+      HasHoldActions: [Array.isArray(s?.HoldActions) && s.HoldActions.length > 0],
+      HoldActions: this.fb.array(
+        (Array.isArray(s?.HoldActions) ? s.HoldActions : []).map((a: any) =>
           this.createActionGroup(a)
         )
       ),
@@ -527,6 +606,10 @@ export class NewRoomPage implements OnDestroy {
     return this.sources.at(sourceIndex)?.get('Actions') as FormArray;
   }
 
+  getSourceHoldActionsArray(sourceIndex: number): FormArray {
+    return this.sources.at(sourceIndex)?.get('HoldActions') as FormArray;
+  }
+
   getSourceActionControls(sourceIndex: number): FormGroup[] {
     return (this.getSourceActionsArray(sourceIndex)?.controls ?? []) as FormGroup[];
   }
@@ -542,6 +625,22 @@ export class NewRoomPage implements OnDestroy {
   dropSourceAction(sourceIndex: number, event: CdkDragDrop<any[]>): void {
     if (event.previousIndex === event.currentIndex) return;
     const arr = this.getSourceActionsArray(sourceIndex);
+    const control = arr.at(event.previousIndex);
+    arr.removeAt(event.previousIndex, { emitEvent: false });
+    arr.insert(event.currentIndex, control, { emitEvent: false });
+  }
+
+  addSourceHoldAction(sourceIndex: number): void {
+    this.getSourceHoldActionsArray(sourceIndex)?.push(this.createActionGroup());
+  }
+
+  removeSourceHoldAction(sourceIndex: number, actionIndex: number): void {
+    this.getSourceHoldActionsArray(sourceIndex)?.removeAt(actionIndex);
+  }
+
+  dropSourceHoldAction(sourceIndex: number, event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const arr = this.getSourceHoldActionsArray(sourceIndex);
     const control = arr.at(event.previousIndex);
     arr.removeAt(event.previousIndex, { emitEvent: false });
     arr.insert(event.currentIndex, control, { emitEvent: false });
@@ -570,6 +669,7 @@ export class NewRoomPage implements OnDestroy {
       Description: [seed.Description ?? ''],
       Text:        [seed.Text ?? ''],
       Image:       [seed.Image ?? ''],
+      HasActions:  [Array.isArray(seed.Actions) && seed.Actions.length > 0],
       Actions: this.fb.array(
         (Array.isArray(seed.Actions) ? seed.Actions : []).map((a: any) => this.createActionGroup(a))
       ),
@@ -644,8 +744,17 @@ export class NewRoomPage implements OnDestroy {
           this.fb.group({ key: [k], value: [v] })
         )
       ),
+      HasActions:    [Array.isArray(seed.Actions) && seed.Actions.length > 0],
       Actions: this.fb.array(
         (Array.isArray(seed.Actions) ? seed.Actions : []).map((a: any) => this.createActionGroup(a))
+      ),
+      HasHoldActions: [Array.isArray(seed.HoldActions) && seed.HoldActions.length > 0],
+      HoldActions: this.fb.array(
+        (Array.isArray(seed.HoldActions) ? seed.HoldActions : []).map((a: any) => this.createActionGroup(a))
+      ),
+      HasToggleActions: [Array.isArray(seed.ToggleActions) && seed.ToggleActions.length > 0],
+      ToggleActions: this.fb.array(
+        (Array.isArray(seed.ToggleActions) ? seed.ToggleActions : []).map((a: any) => this.createActionGroup(a))
       ),
     });
   }
@@ -686,6 +795,64 @@ export class NewRoomPage implements OnDestroy {
     return this.getPageComponentsArray(pageIndex)?.at(compIndex)?.get('Actions') as FormArray;
   }
 
+  getComponentHoldActionsArray(pageIndex: number, compIndex: number): FormArray {
+    return this.getPageComponentsArray(pageIndex)?.at(compIndex)?.get('HoldActions') as FormArray;
+  }
+
+  getComponentToggleActionsArray(pageIndex: number, compIndex: number): FormArray {
+    return this.getPageComponentsArray(pageIndex)?.at(compIndex)?.get('ToggleActions') as FormArray;
+  }
+
+  addComponentHoldAction(pageIndex: number, compIndex: number): void {
+    this.getComponentHoldActionsArray(pageIndex, compIndex)?.push(this.createActionGroup());
+  }
+
+  removeComponentHoldAction(pageIndex: number, compIndex: number, actionIndex: number): void {
+    this.getComponentHoldActionsArray(pageIndex, compIndex)?.removeAt(actionIndex);
+  }
+
+  dropComponentHoldAction(pageIndex: number, compIndex: number, event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const arr = this.getComponentHoldActionsArray(pageIndex, compIndex);
+    const control = arr.at(event.previousIndex);
+    arr.removeAt(event.previousIndex, { emitEvent: false });
+    arr.insert(event.currentIndex, control, { emitEvent: false });
+  }
+
+  addComponentToggleAction(pageIndex: number, compIndex: number): void {
+    this.getComponentToggleActionsArray(pageIndex, compIndex)?.push(this.createActionGroup());
+  }
+
+  removeComponentToggleAction(pageIndex: number, compIndex: number, actionIndex: number): void {
+    this.getComponentToggleActionsArray(pageIndex, compIndex)?.removeAt(actionIndex);
+  }
+
+  dropComponentToggleAction(pageIndex: number, compIndex: number, event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const arr = this.getComponentToggleActionsArray(pageIndex, compIndex);
+    const control = arr.at(event.previousIndex);
+    arr.removeAt(event.previousIndex, { emitEvent: false });
+    arr.insert(event.currentIndex, control, { emitEvent: false });
+  }
+
+  getComponentActionFieldSpecs(pageIndex: number, compIndex: number, actionIndex: number): FieldSpec[] {
+    const arr = this.getComponentActionsArray(pageIndex, compIndex);
+    if (!arr) return [];
+    return this.getFieldSpecsFor(arr, actionIndex);
+  }
+
+  getComponentHoldActionFieldSpecs(pageIndex: number, compIndex: number, actionIndex: number): FieldSpec[] {
+    const arr = this.getComponentHoldActionsArray(pageIndex, compIndex);
+    if (!arr) return [];
+    return this.getFieldSpecsFor(arr, actionIndex);
+  }
+
+  getComponentToggleActionFieldSpecs(pageIndex: number, compIndex: number, actionIndex: number): FieldSpec[] {
+    const arr = this.getComponentToggleActionsArray(pageIndex, compIndex);
+    if (!arr) return [];
+    return this.getFieldSpecsFor(arr, actionIndex);
+  }
+
   getComponentPropertiesArray(pageIndex: number, compIndex: number): FormArray {
     return this.getPageComponentsArray(pageIndex)?.at(compIndex)?.get('Properties') as FormArray;
   }
@@ -696,12 +863,6 @@ export class NewRoomPage implements OnDestroy {
 
   removeComponentAction(pageIndex: number, compIndex: number, actionIndex: number): void {
     this.getComponentActionsArray(pageIndex, compIndex)?.removeAt(actionIndex);
-  }
-
-  getComponentActionFieldSpecs(pageIndex: number, compIndex: number, actionIndex: number): FieldSpec[] {
-    const arr = this.getComponentActionsArray(pageIndex, compIndex);
-    if (!arr) return [];
-    return this.getFieldSpecsFor(arr, actionIndex);
   }
 
   addComponentProperty(pageIndex: number, compIndex: number): void {
@@ -889,6 +1050,8 @@ export class NewRoomPage implements OnDestroy {
           IsInvisible: c.IsInvisible,
           Properties: props,
           Actions: flattenActions(c.Actions),
+          HoldActions: flattenActions(c.HoldActions),
+          ToggleActions: flattenActions(c.ToggleActions),
           Control: {},
         };
         return acc;
@@ -985,6 +1148,10 @@ export class NewRoomPage implements OnDestroy {
         this.systemOffActions.clear();
         (config.SystemOffActions ?? []).forEach((a: any) => this.addActionFromConfig(this.systemOffActions, a));
 
+        this.sources.clear();
+        this.expandedSources.set(new Set());
+        Object.entries(config.Sources ?? {}).forEach(([key, s]) => this.sources.push(this.createSourceGroup(key, s)));
+
         this.devices.clear();
         this.expandedDevices.set(new Set());
         Object.entries(config.Devices ?? {}).forEach(([key, d]) => this.devices.push(this.buildDeviceGroup(key, d)));
@@ -999,6 +1166,7 @@ export class NewRoomPage implements OnDestroy {
         this.expandedPages.set(new Set());
         this.expandedComponents.set(new Set());
         (Array.isArray(config.Pages) ? config.Pages : []).forEach((p: any) => this.pages.push(this.buildPageGroup(p)));
+        this.syncCtxPages();
       },
     });
   }
@@ -1039,7 +1207,7 @@ export class NewRoomPage implements OnDestroy {
       (Array.isArray(compsArray) ? compsArray : []).reduce((acc: any, c: any) => {
         const key = c.Key; if (!key) return acc;
         const props = (Array.isArray(c.Properties) ? c.Properties : []).reduce((pa: any, p: any) => { if (p.key) pa[p.key] = p.value; return pa; }, {});
-        acc[key] = { IsInvisible: c.IsInvisible, Properties: props, Actions: flattenActions(c.Actions), Control: {} };
+        acc[key] = { IsInvisible: c.IsInvisible, Properties: props, Actions: flattenActions(c.Actions), HoldActions: flattenActions(c.HoldActions), ToggleActions: flattenActions(c.ToggleActions), Control: {} };
         return acc;
       }, {});
 
@@ -1049,7 +1217,9 @@ export class NewRoomPage implements OnDestroy {
       SystemOffActions: flattenActions(raw.SystemOffActions),
       Sources: (Array.isArray(raw.Sources) ? raw.Sources : []).reduce((acc: any, s: any) => {
         const key = s.Key || s.Control; if (!key) return acc;
-        const { Key, ...rest } = s; acc[key] = { ...rest, Actions: flattenActions(rest.Actions) }; return acc;
+        const { Key, ...rest } = s;
+        acc[key] = { ...rest, Actions: flattenActions(rest.Actions), HoldActions: flattenActions(rest.HoldActions) };
+        return acc;
       }, {}),
       Devices: (Array.isArray(raw.Devices) ? raw.Devices : []).reduce((acc: any, d: any) => {
         const key = d.key; if (!key) return acc;
@@ -1099,7 +1269,7 @@ export class NewRoomPage implements OnDestroy {
           if (p.key) pa[p.key] = p.value;
           return pa;
         }, {});
-        acc[key] = { IsInvisible: c.IsInvisible, Properties: props, Actions: flattenActions(c.Actions), Control: {} };
+        acc[key] = { IsInvisible: c.IsInvisible, Properties: props, Actions: flattenActions(c.Actions), HoldActions: flattenActions(c.HoldActions), ToggleActions: flattenActions(c.ToggleActions), Control: {} };
         return acc;
       }, {});
 

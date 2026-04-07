@@ -165,6 +165,10 @@ export class AdminTemplateManagementPage implements OnInit {
     return new Date(iso).toLocaleDateString();
   }
 
+  editTemplate(id: string): void {
+    this.router.navigate(['/edit-template', id]);
+  }
+
   goBack(): void {
     this.router.navigate(['/monitor']);
   }

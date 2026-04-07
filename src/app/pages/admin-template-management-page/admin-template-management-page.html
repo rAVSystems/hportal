@@ -101,6 +101,10 @@
 
               <!-- Actions cell -->
               <td class="actions-cell">
+                <button mat-stroked-button class="edit-btn" (click)="editTemplate(t._id)">
+                  <mat-icon>edit</mat-icon>
+                  Edit
+                </button>
                 <button mat-stroked-button class="delete-btn" (click)="promptDelete(t._id)">
                   <mat-icon>delete</mat-icon>
                   Delete

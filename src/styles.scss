@@ -39,6 +39,10 @@ body {
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
+body:has(.modal-backdrop) {
+  overflow: hidden;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -53,7 +57,7 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
   background: white;
   border-radius: 16px;
   padding: 2rem;
-  width: 420px;
+  width: 540px;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -74,7 +78,24 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
   button {
     flex: 1;
     margin: 0;
+    white-space: nowrap;
   }
+}
+
+.btn-green {
+  background-color: #2e7d32 !important;
+  color: white !important;
+  &:disabled {
+    background-color: #bdbdbd !important;
+    color: #757575 !important;
+  }
+}
+
+.sync-in-use {
+  font-size: 0.8rem;
+  color: #e53935;
+  text-align: center;
+  margin: 0;
 }
 
 .modal-confirm-sub {

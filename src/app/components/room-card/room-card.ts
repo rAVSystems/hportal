@@ -54,11 +54,11 @@ export class RoomCard {
   showGuiModal = signal(false);
   showAdvancedPanel = signal(false);
 
-  goToControl() {
+  goToControl(mode: 'inroom' | 'advanced' = 'inroom') {
     const id = this.room()._id;
     const cfg = this.cfg();
     this.router.navigate(['/control', id, cfg.ip], {
-      queryParams: { building: cfg.building, room: cfg.room }
+      queryParams: { building: cfg.building, room: cfg.room, mode }
     });
   }
 

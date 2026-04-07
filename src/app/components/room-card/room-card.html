@@ -71,11 +71,11 @@
   <div class="gui-overlay" (click)="showGuiModal.set(false)">
     <div class="gui-modal" (click)="$event.stopPropagation()">
       <div class="gui-modal-title">Select To Control</div>
-      <button class="gui-btn" (click)="goToControl()">
+      <button class="gui-btn" (click)="goToControl('inroom')">
         <mat-icon>meeting_room</mat-icon>
         <span>In-Room</span>
       </button>
-      <button class="gui-btn" (click)="goToControl()">
+      <button class="gui-btn" (click)="goToControl('advanced')">
         <mat-icon>settings</mat-icon>
         <span>Advanced</span>
       </button>

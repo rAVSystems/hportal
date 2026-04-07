@@ -16,6 +16,10 @@
   margin-bottom: 1rem;
 }
 
+.control-page.advanced .control-header {
+  max-width: min(95vw, calc((100vh - 80px) * 16 / 10));
+}
+
 .control-title {
   font-size: 18px;
   font-weight: 600;
@@ -37,8 +41,14 @@
 
   iframe {
     display: block;
-    width: 1280px;
-    height: 800px;
+    width: 100%;
+    height: 100%;
     border: none;
+  }
+
+  &.advanced {
+    // Fill most of the viewport at 16:10, capped by both axes
+    width: min(95vw, calc((100vh - 80px) * 16 / 10));
+    height: calc(min(95vw, calc((100vh - 80px) * 16 / 10)) * 10 / 16);
   }
 }

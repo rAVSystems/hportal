@@ -299,8 +299,17 @@
                                                 <label>Group</label>
                                                 <input class="inline-input" formControlName="Group" placeholder="Sources" />
                                             </div>
+                                            <div class="detail-field detail-field--checkbox-row">
+                                                <label>Actions</label>
+                                                <mat-checkbox formControlName="HasActions"></mat-checkbox>
+                                            </div>
+                                            <div class="detail-field detail-field--checkbox-row">
+                                                <label>Hold Actions</label>
+                                                <mat-checkbox formControlName="HasHoldActions"></mat-checkbox>
+                                            </div>
                                         </div>
 
+                                        @if (sources.at(si).get('HasActions')?.value) {
                                         <div class="detail-actions-section">
                                             <label class="detail-actions-title">Actions</label>
                                             <div class="action-list" [formArrayName]="'Actions'" cdkDropList (cdkDropListDropped)="dropSourceAction(si, $event)">
@@ -322,7 +331,8 @@
                                                                 <div class="table-param-field">
                                                                     <label>{{ field.label }}</label>
                                                                     @if (field.kind === 'select') {
-                                                                        <select [formControlName]="field.key">
+                                                                        <select [formControlName]="field.key"
+                                                                            (change)="field.key === 'device' ? onDeviceChange('src-' + si, ai, $any($event.target).value) : null">
                                                                             @for (opt of getOptionsForField(field, 'src-' + si, getSourceActionsArray(si), ai); track opt.value) {
                                                                                 <option [value]="opt.value">{{ opt.label }}</option>
                                                                             }
@@ -347,6 +357,56 @@
                                                 <button mat-stroked-button type="button" (click)="addSourceAction(si)">Add Action</button>
                                             </div>
                                         </div>
+                                        }
+                                        @if (sources.at(si).get('HasHoldActions')?.value) {
+                                        <div class="detail-actions-section">
+                                            <label class="detail-actions-title">Press &amp; Hold Actions</label>
+                                            <div class="action-list" [formArrayName]="'HoldActions'" cdkDropList (cdkDropListDropped)="dropSourceHoldAction(si, $event)">
+                                                @for (a of getSourceHoldActionsArray(si).controls; track a; let ai = $index) {
+                                                    <div class="action-row-div" [formGroupName]="ai" cdkDrag>
+                                                        <div class="action-drag-handle" cdkDragHandle>
+                                                            <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                                        </div>
+                                                        <div class="table-param-field action-type-field">
+                                                            <label>Action</label>
+                                                            <select formControlName="action">
+                                                                @for (opt of actionTypes(); track opt) {
+                                                                    <option [value]="opt">{{ opt }}</option>
+                                                                }
+                                                            </select>
+                                                        </div>
+                                                        <div class="action-params" formGroupName="params">
+                                                            @for (field of getFieldSpecsFor(getSourceHoldActionsArray(si), ai); track field.key) {
+                                                                <div class="table-param-field">
+                                                                    <label>{{ field.label }}</label>
+                                                                    @if (field.kind === 'select') {
+                                                                        <select [formControlName]="field.key"
+                                                                            (change)="field.key === 'device' ? onDeviceChange('src-hold-' + si, ai, $any($event.target).value) : null">
+                                                                            @for (opt of getOptionsForField(field, 'src-hold-' + si, getSourceHoldActionsArray(si), ai); track opt.value) {
+                                                                                <option [value]="opt.value">{{ opt.label }}</option>
+                                                                            }
+                                                                        </select>
+                                                                    }
+                                                                    @if (field.kind === 'text') {
+                                                                        <input type="text" [formControlName]="field.key" />
+                                                                    }
+                                                                    @if (field.kind === 'number') {
+                                                                        <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" />
+                                                                    }
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                        <button mat-icon-button type="button" (click)="removeSourceHoldAction(si, ai)">
+                                                            <mat-icon>delete</mat-icon>
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                            <div class="action-add-row">
+                                                <button mat-stroked-button type="button" (click)="addSourceHoldAction(si)">Add Action</button>
+                                            </div>
+                                        </div>
+                                        }
                                     </div>
                                 }
                             </div>
@@ -410,6 +470,13 @@
                                                 <input class="inline-input" formControlName="Image" placeholder="CSS class or URL" />
                                             </div>
                                         </div>
+                                        <div class="device-detail-grid">
+                                            <div class="detail-field detail-field--checkbox-row">
+                                                <label>Actions</label>
+                                                <mat-checkbox formControlName="HasActions"></mat-checkbox>
+                                            </div>
+                                        </div>
+                                        @if (pages.at(pi).get('HasActions')?.value) {
                                         <div class="detail-actions-section">
                                             <label class="detail-actions-title">Actions</label>
                                             <div class="action-list" [formArrayName]="'Actions'" cdkDropList (cdkDropListDropped)="dropPageAction(pi, $event)">
@@ -431,7 +498,8 @@
                                                                 <div class="table-param-field">
                                                                     <label>{{ field.label }}</label>
                                                                     @if (field.kind === 'select') {
-                                                                        <select [formControlName]="field.key">
+                                                                        <select [formControlName]="field.key"
+                                                                            (change)="field.key === 'device' ? onDeviceChange('pg-' + pi, ai, $any($event.target).value) : null">
                                                                             @for (opt of getOptionsForField(field, 'pg-' + pi, getPageActionsArray(pi), ai); track opt.value) {
                                                                                 <option [value]="opt.value">{{ opt.label }}</option>
                                                                             }
@@ -452,6 +520,7 @@
                                                 <button mat-stroked-button type="button" (click)="addPageAction(pi)">Add Action</button>
                                             </div>
                                         </div>
+                                        }
                                         <!-- ── Components ── -->
                                         <div class="detail-actions-section">
                                             <label class="detail-actions-title">Components</label>
@@ -466,6 +535,18 @@
                                                                 <div class="source-field">
                                                                     <label>Key</label>
                                                                     <input class="inline-input" formControlName="Key" (click)="$event.stopPropagation()" placeholder="ComponentKey" />
+                                                                </div>
+                                                                <div class="source-field source-field--checkbox">
+                                                                    <label>Actions</label>
+                                                                    <mat-checkbox formControlName="HasActions" (click)="$event.stopPropagation()"></mat-checkbox>
+                                                                </div>
+                                                                <div class="source-field source-field--checkbox">
+                                                                    <label>Hold Actions</label>
+                                                                    <mat-checkbox formControlName="HasHoldActions" (click)="$event.stopPropagation()"></mat-checkbox>
+                                                                </div>
+                                                                <div class="source-field source-field--checkbox">
+                                                                    <label>Toggle</label>
+                                                                    <mat-checkbox formControlName="HasToggleActions" (click)="$event.stopPropagation()"></mat-checkbox>
                                                                 </div>
                                                                 <div class="source-field source-field--checkbox">
                                                                     <label>Invisible</label>
@@ -502,6 +583,7 @@
                                                                         <button mat-stroked-button type="button" (click)="addComponentProperty(pi, ci)">Add Property</button>
                                                                     </div>
                                                                 </div>
+                                                                @if (getPageComponentsArray(pi).at(ci).get('HasActions')?.value) {
                                                                 <div class="detail-actions-section">
                                                                     <label class="detail-actions-title">Actions</label>
                                                                     <div class="action-list" [formArrayName]="'Actions'" cdkDropList (cdkDropListDropped)="dropComponentAction(pi, ci, $event)">
@@ -523,7 +605,8 @@
                                                                                         <div class="table-param-field">
                                                                                             <label>{{ field.label }}</label>
                                                                                             @if (field.kind === 'select') {
-                                                                                                <select [formControlName]="field.key">
+                                                                                                <select [formControlName]="field.key"
+                                                                                                    (change)="field.key === 'device' ? onDeviceChange('comp-' + pi + '-' + ci, ai, $any($event.target).value) : null">
                                                                                                     @for (opt of getOptionsForField(field, 'comp-' + pi + '-' + ci, getComponentActionsArray(pi, ci), ai); track opt.value) {
                                                                                                         <option [value]="opt.value">{{ opt.label }}</option>
                                                                                                     }
@@ -544,6 +627,97 @@
                                                                         <button mat-stroked-button type="button" (click)="addComponentAction(pi, ci)">Add Action</button>
                                                                     </div>
                                                                 </div>
+                                                                }
+                                                                @if (getPageComponentsArray(pi).at(ci).get('HasHoldActions')?.value) {
+                                                                <div class="detail-actions-section">
+                                                                    <label class="detail-actions-title">Press &amp; Hold Actions</label>
+                                                                    <div class="action-list" [formArrayName]="'HoldActions'" cdkDropList (cdkDropListDropped)="dropComponentHoldAction(pi, ci, $event)">
+                                                                        @for (a of getComponentHoldActionsArray(pi, ci).controls; track a; let ai = $index) {
+                                                                            <div class="action-row-div" [formGroupName]="ai" cdkDrag>
+                                                                                <div class="action-drag-handle" cdkDragHandle>
+                                                                                    <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                                                                </div>
+                                                                                <div class="table-param-field action-type-field">
+                                                                                    <label>Action</label>
+                                                                                    <select formControlName="action">
+                                                                                        @for (opt of actionTypes(); track opt) {
+                                                                                            <option [value]="opt">{{ opt }}</option>
+                                                                                        }
+                                                                                    </select>
+                                                                                </div>
+                                                                                <div class="action-params" formGroupName="params">
+                                                                                    @for (field of getComponentHoldActionFieldSpecs(pi, ci, ai); track field.key) {
+                                                                                        <div class="table-param-field">
+                                                                                            <label>{{ field.label }}</label>
+                                                                                            @if (field.kind === 'select') {
+                                                                                                <select [formControlName]="field.key"
+                                                                                                    (change)="field.key === 'device' ? onDeviceChange('comp-hold-' + pi + '-' + ci, ai, $any($event.target).value) : null">
+                                                                                                    @for (opt of getOptionsForField(field, 'comp-hold-' + pi + '-' + ci, getComponentHoldActionsArray(pi, ci), ai); track opt.value) {
+                                                                                                        <option [value]="opt.value">{{ opt.label }}</option>
+                                                                                                    }
+                                                                                                </select>
+                                                                                            }
+                                                                                            @if (field.kind === 'text') { <input type="text" [formControlName]="field.key" /> }
+                                                                                            @if (field.kind === 'number') { <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" /> }
+                                                                                        </div>
+                                                                                    }
+                                                                                </div>
+                                                                                <button mat-icon-button type="button" (click)="removeComponentHoldAction(pi, ci, ai)">
+                                                                                    <mat-icon>delete</mat-icon>
+                                                                                </button>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                    <div class="action-add-row">
+                                                                        <button mat-stroked-button type="button" (click)="addComponentHoldAction(pi, ci)">Add Action</button>
+                                                                    </div>
+                                                                </div>
+                                                                }
+                                                                @if (getPageComponentsArray(pi).at(ci).get('HasToggleActions')?.value) {
+                                                                <div class="detail-actions-section">
+                                                                    <label class="detail-actions-title">Toggle Actions</label>
+                                                                    <div class="action-list" [formArrayName]="'ToggleActions'" cdkDropList (cdkDropListDropped)="dropComponentToggleAction(pi, ci, $event)">
+                                                                        @for (a of getComponentToggleActionsArray(pi, ci).controls; track a; let ai = $index) {
+                                                                            <div class="action-row-div" [formGroupName]="ai" cdkDrag>
+                                                                                <div class="action-drag-handle" cdkDragHandle>
+                                                                                    <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                                                                </div>
+                                                                                <div class="table-param-field action-type-field">
+                                                                                    <label>Action</label>
+                                                                                    <select formControlName="action">
+                                                                                        @for (opt of actionTypes(); track opt) {
+                                                                                            <option [value]="opt">{{ opt }}</option>
+                                                                                        }
+                                                                                    </select>
+                                                                                </div>
+                                                                                <div class="action-params" formGroupName="params">
+                                                                                    @for (field of getComponentToggleActionFieldSpecs(pi, ci, ai); track field.key) {
+                                                                                        <div class="table-param-field">
+                                                                                            <label>{{ field.label }}</label>
+                                                                                            @if (field.kind === 'select') {
+                                                                                                <select [formControlName]="field.key"
+                                                                                                    (change)="field.key === 'device' ? onDeviceChange('cmp-toggle-' + pi + '-' + ci, ai, $any($event.target).value) : null">
+                                                                                                    @for (opt of getOptionsForField(field, 'cmp-toggle-' + pi + '-' + ci, getComponentToggleActionsArray(pi, ci), ai); track opt.value) {
+                                                                                                        <option [value]="opt.value">{{ opt.label }}</option>
+                                                                                                    }
+                                                                                                </select>
+                                                                                            }
+                                                                                            @if (field.kind === 'text') { <input type="text" [formControlName]="field.key" /> }
+                                                                                            @if (field.kind === 'number') { <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" /> }
+                                                                                        </div>
+                                                                                    }
+                                                                                </div>
+                                                                                <button mat-icon-button type="button" (click)="removeComponentToggleAction(pi, ci, ai)">
+                                                                                    <mat-icon>delete</mat-icon>
+                                                                                </button>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                    <div class="action-add-row">
+                                                                        <button mat-stroked-button type="button" (click)="addComponentToggleAction(pi, ci)">Add Action</button>
+                                                                    </div>
+                                                                </div>
+                                                                }
                                                             </div>
                                                         }
                                                     </div>

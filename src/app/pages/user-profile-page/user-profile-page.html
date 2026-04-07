@@ -149,7 +149,13 @@
               <td class="date-cell">{{ t.permission }}</td>
               <td class="date-cell">{{ formatDate(t.created) }}</td>
               <td class="actions-cell">
-                <button mat-stroked-button class="delete-btn" (click)="promptDelete(t._id)">
+                @if (t.createdby === auth.user()?.username) {
+                  <button mat-stroked-button class="edit-btn" (click)="editTemplate(t._id)">
+                    <mat-icon>edit</mat-icon>
+                    Edit
+                  </button>
+                }
+                <button mat-stroked-button class="delete-btn" (click)="promptDelete(t._id)" [disabled]="t.permission === 'admin'">
                   <mat-icon>delete</mat-icon>
                   Delete
                 </button>

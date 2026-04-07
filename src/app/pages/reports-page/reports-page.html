@@ -1,0 +1,59 @@
+<div class="reports-page">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1 class="page-title">Reports</h1>
+      <span class="page-subtitle">Mock data — last updated {{ lastUpdated }}</span>
+    </div>
+  </div>
+
+  <div class="reports-grid">
+    @for (report of reports(); track report.id) {
+      <div class="report-card">
+        <div class="report-card-header" [style.border-left-color]="report.color">
+          <mat-icon [style.color]="report.color">{{ report.icon }}</mat-icon>
+          <div>
+            <h3 class="report-title">{{ report.title }}</h3>
+            <span class="report-subtitle">Top 10 Rooms</span>
+          </div>
+        </div>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th class="col-rank">#</th>
+              <th class="col-room">Room</th>
+              <th class="col-value">{{ report.unit }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of report.rows; track row.rank) {
+              <tr>
+                <td class="col-rank">
+                  @if (row.rank <= 3) {
+                    <span class="rank-star-wrap" [class.gold]="row.rank === 1" [class.silver]="row.rank === 2" [class.bronze]="row.rank === 3">
+                      <mat-icon>star</mat-icon>
+                      <span class="rank-star-number">{{ row.rank }}</span>
+                    </span>
+                  } @else {
+                    <span class="rank-badge">{{ row.rank }}</span>
+                  }
+                </td>
+                <td class="col-room">
+                  <span class="room-name">{{ row.room }}</span>
+                  <span class="building-name">{{ row.building }}</span>
+                </td>
+                <td class="col-value">
+                  <span class="value-bar-wrap">
+                    <span class="value-bar" [style.width.%]="(row.raw / report.rows[0].raw) * 100" [style.background-color]="report.color"></span>
+                  </span>
+                  <span class="value-text">{{ row.value }}</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+</div>

@@ -1,3 +1,21 @@
+@if (showSaveModal()) {
+  <div class="modal-backdrop">
+    <div class="modal-confirm" (click)="$event.stopPropagation()">
+      <p class="modal-confirm-message">{{ templateMode() ? 'Template saved to database.' : 'Changes have been saved to the database.' }}</p>
+      <div class="modal-confirm-actions">
+        <button mat-stroked-button type="button" (click)="showSaveModal.set(false)">Continue Editing</button>
+        <button mat-flat-button color="primary" type="button" (click)="showSaveModal.set(false); goBack()">Go To Dashboard</button>
+        @if (!templateMode()) {
+          <button mat-flat-button class="btn-green" type="button" (click)="syncToCore()" [disabled]="roomInUse()">Sync To Core</button>
+        }
+      </div>
+      @if (!templateMode() && roomInUse()) {
+        <p class="sync-in-use">Room is in use — Sync To Core is unavailable</p>
+      }
+    </div>
+  </div>
+}
+
 @if (showDeleteConfirm()) {
   <div class="modal-backdrop" (click)="showDeleteConfirm.set(false)">
     <div class="modal-confirm" (click)="$event.stopPropagation()">
@@ -101,22 +119,23 @@
 <div class="edit-page">
     <div class="side-nav-bar">
         <nav class="side-nav">
-            <a class="side-nav-link" (click)="scrollTo('section-system-settings')">System Settings</a>
-            <a class="side-nav-link" (click)="scrollTo('section-system-on')">System On Actions</a>
-            <a class="side-nav-link" (click)="scrollTo('section-system-off')">System Off Actions</a>
+            <a class="side-nav-link" (click)="scrollTo('section-system-settings')">System</a>
+            <a class="side-nav-link" (click)="scrollTo('section-system-on')">System On</a>
+            <a class="side-nav-link" (click)="scrollTo('section-system-off')">System Off</a>
+            <a class="side-nav-link" (click)="scrollTo('section-scheduled')">Scheduled</a>
             <a class="side-nav-link" (click)="scrollTo('section-sources')">Sources</a>
             <a class="side-nav-link" (click)="scrollTo('section-pages')">Pages</a>
-            <a class="side-nav-link" (click)="scrollTo('section-audio')">Audio Settings</a>
+            <a class="side-nav-link" (click)="scrollTo('section-audio')">Audio</a>
             <a class="side-nav-link" (click)="scrollTo('section-devices')">Devices</a>
         </nav>
         <div class="side-nav-actions">
-            <button class="save-btn" mat-flat-button color="primary" type="button" (click)="onSave()" [disabled]="saving() || !form.dirty">
-                @if (saving()) { Saving… } @else if (saveSuccess()) { Saved! } @else { Save }
+            <button class="save-btn" mat-flat-button color="primary" type="button" (click)="onSave()" [disabled]="saving() || (!templateMode() && !form.dirty)">
+                @if (saving()) { Saving… } @else { Save }
             </button>
             @if (saveError()) {
                 <div class="save-error">{{ saveError() }}</div>
             }
-            @if (canEditDeviceAdmin) {
+            @if (!templateMode() && canEditDeviceAdmin) {
                 <button class="delete-room-btn" mat-stroked-button color="warn" type="button" (click)="showDeleteConfirm.set(true); deleteConfirmBuilding.set(''); deleteError.set(null)">
                     Delete Room
                 </button>
@@ -140,11 +159,15 @@
                     <button class="back-btn" type="button" mat-icon-button (click)="form.dirty ? showCancelConfirm.set(true) : goBack()">
                         <mat-icon>arrow_back</mat-icon>
                     </button>
-                    <h2 class="edit-form-title">{{ form.get('building')?.value }} {{form.get('room')?.value }}</h2>
-                    <a class="sync-link" (click)="syncToCore()">Sync To Core</a>
-                    <div class="edit-form-header-spacer"></div>
-                    <a class="sync-link" (click)="loadTemplate()">Load From Template</a>
-                    <a class="sync-link" (click)="saveAsTemplate()">Save As Template</a>
+                    @if (templateMode()) {
+                      <h2 class="edit-form-title">Edit Template: {{ editingTemplateName() }}</h2>
+                    } @else {
+                      <h2 class="edit-form-title">{{ form.get('building')?.value }} {{form.get('room')?.value }}</h2>
+                      <a class="sync-link" (click)="syncToCore()">Sync To Core</a>
+                      <div class="edit-form-header-spacer"></div>
+                      <a class="sync-link" (click)="loadTemplate()">Load From Template</a>
+                      <a class="sync-link" (click)="saveAsTemplate()">Save As Template</a>
+                    }
                 </div>
 <div class="edit-form__section">
 
@@ -296,12 +319,160 @@
     </div>
   </div>
 
+  <div class="form-section" id="section-scheduled">
+    <h2 class="section-title">Scheduled Actions</h2>
+
+    <div class="scheduled-list" formArrayName="ScheduledActions" cdkDropList (cdkDropListDropped)="dropScheduledAction($event)">
+      @for (sched of scheduledActionControls; track sched; let si = $index) {
+        <div class="source-row" [formGroupName]="si" cdkDrag [class.expanded]="isScheduledExpanded(si)">
+
+          <!-- Drag handle -->
+          <div class="source-drag-handle" cdkDragHandle>
+            <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+          </div>
+
+          <!-- Summary row (click to expand) -->
+          <div class="source-summary" (click)="toggleScheduledExpand(si)">
+            <div class="source-summary-fields">
+              <div class="source-field">
+                <label>Name</label>
+                <input class="inline-input" formControlName="name" placeholder="Event name"
+                  (click)="$event.stopPropagation()" />
+              </div>
+              <div class="source-field">
+                <label>Type</label>
+                <span class="scheduled-type-badge">{{ sched.get('type')?.value === 'recurring' ? 'Recurring' : 'One Time' }}</span>
+              </div>
+            </div>
+            <mat-icon class="source-expand-icon">{{ isScheduledExpanded(si) ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </div>
+
+          <!-- Delete -->
+          <button mat-icon-button type="button" (click)="removeScheduledAction(si); $event.stopPropagation()">
+            <mat-icon>delete</mat-icon>
+          </button>
+
+          <!-- Detail panel -->
+          @if (isScheduledExpanded(si)) {
+            <div class="source-detail">
+
+              <!-- Type toggle -->
+              <div class="scheduled-type-row">
+                <label class="scheduled-checkbox-label">
+                  <input type="checkbox"
+                    [checked]="sched.get('type')?.value === 'onetime'"
+                    (change)="sched.get('type')?.setValue('onetime'); markDirty()" />
+                  One Time
+                </label>
+                <label class="scheduled-checkbox-label">
+                  <input type="checkbox"
+                    [checked]="sched.get('type')?.value === 'recurring'"
+                    (change)="sched.get('type')?.setValue('recurring'); markDirty()" />
+                  Recurring
+                </label>
+              </div>
+
+              <!-- One-time: date + time -->
+              @if (sched.get('type')?.value === 'onetime') {
+                <div class="scheduled-datetime-row">
+                  <div class="table-param-field">
+                    <label>Date</label>
+                    <input type="date" formControlName="date" />
+                  </div>
+                  <div class="table-param-field">
+                    <label>Time</label>
+                    <input type="time" formControlName="time" />
+                  </div>
+                </div>
+              }
+
+              <!-- Recurring: day checkboxes + time -->
+              @if (sched.get('type')?.value === 'recurring') {
+                <div class="scheduled-recurring-row">
+                  <div class="scheduled-days-group" formGroupName="days">
+                    @for (day of daysOfWeek; track day) {
+                      <label class="scheduled-day-label">
+                        <input type="checkbox" [formControlName]="day" />
+                        {{ day }}
+                      </label>
+                    }
+                  </div>
+                  <div class="table-param-field scheduled-time-field">
+                    <label>Time</label>
+                    <input type="time" formControlName="time" />
+                  </div>
+                </div>
+              }
+
+              <!-- Actions list -->
+              <div class="scheduled-actions-list">
+                <div class="action-list" [formArrayName]="'actions'" cdkDropList (cdkDropListDropped)="dropAction(getScheduledActionActionsArray(si), $event)">
+                  @for (a of getScheduledActionActionsControls(si); track a; let ai = $index) {
+                    <div class="action-row-div" [formGroupName]="ai" cdkDrag>
+                      <div class="action-drag-handle" cdkDragHandle>
+                        <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                      </div>
+
+                      <div class="table-param-field action-type-field">
+                        <label>Action</label>
+                        <select formControlName="action">
+                          @for (opt of actionTypes(); track opt) {
+                            <option [value]="opt">{{ opt }}</option>
+                          }
+                        </select>
+                      </div>
+
+                      <div class="action-params" formGroupName="params">
+                        @for (field of getFieldSpecsFor(getScheduledActionActionsArray(si), ai); track field.key) {
+                          <div class="table-param-field">
+                            <label>{{ field.label }}</label>
+                            @if (field.kind === 'select') {
+                              <select [formControlName]="field.key"
+                                (change)="field.key === 'device' ? onDeviceChange('ScheduledActions-' + si, ai, $any($event.target).value) : null">
+                                @for (opt of getOptionsForField(field, 'ScheduledActions-' + si, getScheduledActionActionsArray(si), ai); track $index) {
+                                  <option [value]="opt.value">{{ opt.label }}</option>
+                                }
+                              </select>
+                            }
+                            @if (field.kind === 'text') {
+                              <input type="text" [formControlName]="field.key" />
+                            }
+                            @if (field.kind === 'number') {
+                              <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" />
+                            }
+                          </div>
+                        }
+                      </div>
+
+                      <button mat-icon-button type="button" (click)="removeScheduledActionAction(si, ai)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  }
+                </div>
+                <div class="action-add-row">
+                  <button mat-stroked-button type="button" (click)="addScheduledActionAction(si)">Add Action</button>
+                </div>
+              </div>
+
+            </div>
+          }
+
+        </div>
+      }
+    </div>
+
+    <div class="action-add-row">
+      <button mat-stroked-button type="button" (click)="addScheduledAction()">Add Scheduled Event</button>
+    </div>
+  </div>
+
   <div class="form-section" id="section-sources">
     <h2 class="section-title">Source Settings</h2>
 
     <div class="source-list" formArrayName="Sources" cdkDropList (cdkDropListDropped)="dropSource($event)">
       @for (src of sourceControls; track src; let si = $index) {
-        <div class="source-row" [formGroupName]="si" cdkDrag>
+        <div class="source-row" [formGroupName]="si" cdkDrag [class.expanded]="isSourceExpanded(si)">
           <div class="source-drag-handle" cdkDragHandle>
             <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
           </div>
@@ -351,12 +522,17 @@
                   <label>Group</label>
                   <input class="inline-input" formControlName="Group" placeholder="Sources" />
                 </div>
-                <div class="detail-field">
-                  <label>Press &amp; Hold</label>
+                <div class="detail-field detail-field--checkbox-row">
+                  <label>Actions</label>
+                  <mat-checkbox formControlName="HasActions"></mat-checkbox>
+                </div>
+                <div class="detail-field detail-field--checkbox-row">
+                  <label>Hold Actions</label>
                   <mat-checkbox formControlName="HasHoldActions"></mat-checkbox>
                 </div>
               </div>
 
+              @if (sources.at(si).get('HasActions')?.value) {
               <div class="detail-actions-section">
                 <label class="detail-actions-title">Actions</label>
                 <div class="action-list" [formArrayName]="'Actions'" cdkDropList (cdkDropListDropped)="dropSourceAction(si, $event)">
@@ -378,7 +554,8 @@
                           <div class="table-param-field">
                             <label>{{ field.label }}</label>
                             @if (field.kind === 'select') {
-                              <select [formControlName]="field.key">
+                              <select [formControlName]="field.key"
+                                (change)="field.key === 'device' ? onDeviceChange('src-' + si, ai, $any($event.target).value) : null">
                                 @for (opt of getOptionsForField(field, 'src-' + si, getSourceActionsArray(si), ai); track $index) {
                                   <option [value]="opt.value">{{ opt.label }}</option>
                                 }
@@ -403,6 +580,7 @@
                   <button mat-stroked-button type="button" (click)="addSourceAction(si)">Add Action</button>
                 </div>
               </div>
+              }
               @if (sources.at(si).get('HasHoldActions')?.value) {
                 <div class="detail-actions-section">
                   <label class="detail-actions-title">Press &amp; Hold Actions</label>
@@ -425,7 +603,8 @@
                             <div class="table-param-field">
                               <label>{{ field.label }}</label>
                               @if (field.kind === 'select') {
-                                <select [formControlName]="field.key">
+                                <select [formControlName]="field.key"
+                                  (change)="field.key === 'device' ? onDeviceChange('src-hold-' + si, ai, $any($event.target).value) : null">
                                   @for (opt of getOptionsForField(field, 'src-hold-' + si, getSourceHoldActionsArray(si), ai); track $index) {
                                     <option [value]="opt.value">{{ opt.label }}</option>
                                   }
@@ -466,7 +645,7 @@
     <h2 class="section-title">Pages</h2>
     <div class="source-list" formArrayName="Pages" cdkDropList (cdkDropListDropped)="dropPage($event)">
       @for (pg of pageControls; track pg; let pi = $index) {
-        <div class="source-row" [formGroupName]="pi" cdkDrag>
+        <div class="source-row" [formGroupName]="pi" cdkDrag [class.expanded]="isPageExpanded(pi)">
           <div class="source-drag-handle" cdkDragHandle>
             <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
           </div>
@@ -487,6 +666,10 @@
               <div class="source-field">
                 <label>Image</label>
                 <input class="inline-input" formControlName="Image" (click)="$event.stopPropagation()" placeholder="CSS class or URL" />
+              </div>
+              <div class="source-field source-field--checkbox">
+                <label>Actions</label>
+                <mat-checkbox formControlName="HasActions" (click)="$event.stopPropagation()"></mat-checkbox>
               </div>
             </div>
             <mat-icon class="source-expand-icon">{{ isPageExpanded(pi) ? 'expand_less' : 'expand_more' }}</mat-icon>
@@ -514,6 +697,7 @@
                   <input class="inline-input" formControlName="Image" placeholder="CSS class or URL" />
                 </div>
               </div>
+              @if (pages.at(pi).get('HasActions')?.value) {
               <div class="detail-actions-section">
                 <label class="detail-actions-title">Actions</label>
                 <div class="action-list" [formArrayName]="'Actions'" cdkDropList (cdkDropListDropped)="dropPageAction(pi, $event)">
@@ -535,7 +719,8 @@
                           <div class="table-param-field">
                             <label>{{ field.label }}</label>
                             @if (field.kind === 'select') {
-                              <select [formControlName]="field.key">
+                              <select [formControlName]="field.key"
+                                (change)="field.key === 'device' ? onDeviceChange('pg-' + pi, ai, $any($event.target).value) : null">
                                 @for (opt of getOptionsForField(field, 'pg-' + pi, getPageActionsArray(pi), ai); track $index) {
                                   <option [value]="opt.value">{{ opt.label }}</option>
                                 }
@@ -556,12 +741,13 @@
                   <button mat-stroked-button type="button" (click)="addPageAction(pi)">Add Action</button>
                 </div>
               </div>
+              }
               <!-- ── Components ── -->
               <div class="detail-actions-section">
                 <label class="detail-actions-title">Components</label>
                 <div class="source-list" formArrayName="Components" cdkDropList (cdkDropListDropped)="dropComponent(pi, $event)">
                   @for (comp of getPageComponentControls(pi); track comp; let ci = $index) {
-                    <div class="source-row" [formGroupName]="ci" cdkDrag>
+                    <div class="source-row" [formGroupName]="ci" cdkDrag [class.expanded]="isComponentExpanded(pi, ci)">
                       <div class="source-drag-handle" cdkDragHandle>
                         <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
                       </div>
@@ -572,8 +758,16 @@
                             <input class="inline-input" formControlName="Key" (click)="$event.stopPropagation()" placeholder="ComponentKey" />
                           </div>
                           <div class="source-field source-field--checkbox">
-                            <label>Press &amp; Hold</label>
+                            <label>Actions</label>
+                            <mat-checkbox formControlName="HasActions" (click)="$event.stopPropagation()"></mat-checkbox>
+                          </div>
+                          <div class="source-field source-field--checkbox">
+                            <label>Hold Actions</label>
                             <mat-checkbox formControlName="HasHoldActions" (click)="$event.stopPropagation()"></mat-checkbox>
+                          </div>
+                          <div class="source-field source-field--checkbox">
+                            <label>Toggle</label>
+                            <mat-checkbox formControlName="HasToggleActions" (click)="$event.stopPropagation()"></mat-checkbox>
                           </div>
                           <div class="source-field source-field--checkbox">
                             <label>Invisible</label>
@@ -612,6 +806,7 @@
                             </div>
                           </div>
                           <!-- Actions -->
+                          @if (getPageComponentsArray(pi).at(ci).get('HasActions')?.value) {
                           <div class="detail-actions-section">
                             <label class="detail-actions-title">Actions</label>
                             <div class="action-list" [formArrayName]="'Actions'" cdkDropList (cdkDropListDropped)="dropComponentAction(pi, ci, $event)">
@@ -633,7 +828,8 @@
                                       <div class="table-param-field">
                                         <label>{{ field.label }}</label>
                                         @if (field.kind === 'select') {
-                                          <select [formControlName]="field.key">
+                                          <select [formControlName]="field.key"
+                                            (change)="field.key === 'device' ? onDeviceChange('comp-' + pi + '-' + ci, ai, $any($event.target).value) : null">
                                             @for (opt of getOptionsForField(field, 'comp-' + pi + '-' + ci, getComponentActionsArray(pi, ci), ai); track $index) {
                                               <option [value]="opt.value">{{ opt.label }}</option>
                                             }
@@ -654,6 +850,7 @@
                               <button mat-stroked-button type="button" (click)="addComponentAction(pi, ci)">Add Action</button>
                             </div>
                           </div>
+                          }
                           @if (getPageComponentsArray(pi).at(ci).get('HasHoldActions')?.value) {
                             <div class="detail-actions-section">
                               <label class="detail-actions-title">Press &amp; Hold Actions</label>
@@ -676,7 +873,8 @@
                                         <div class="table-param-field">
                                           <label>{{ field.label }}</label>
                                           @if (field.kind === 'select') {
-                                            <select [formControlName]="field.key">
+                                            <select [formControlName]="field.key"
+                                              (change)="field.key === 'device' ? onDeviceChange('comp-hold-' + pi + '-' + ci, ai, $any($event.target).value) : null">
                                               @for (opt of getOptionsForField(field, 'comp-hold-' + pi + '-' + ci, getComponentHoldActionsArray(pi, ci), ai); track $index) {
                                                 <option [value]="opt.value">{{ opt.label }}</option>
                                               }
@@ -695,6 +893,55 @@
                               </div>
                               <div class="action-add-row">
                                 <button mat-stroked-button type="button" (click)="addComponentHoldAction(pi, ci)">Add Action</button>
+                              </div>
+                            </div>
+                          }
+                          @if (getPageComponentsArray(pi).at(ci).get('HasToggleActions')?.value) {
+                            <div class="detail-actions-section">
+                              <label class="detail-actions-title">Toggle Actions</label>
+                              <div class="action-list" [formArrayName]="'ToggleActions'" cdkDropList (cdkDropListDropped)="dropComponentToggleAction(pi, ci, $event)">
+                                @for (a of getComponentToggleActionsArray(pi, ci).controls; track a; let ai = $index) {
+                                  <div class="action-row-div" [formGroupName]="ai" cdkDrag>
+                                    <div class="action-drag-handle" cdkDragHandle>
+                                      <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
+                                    </div>
+                                    <div class="table-param-field action-type-field">
+                                      <label>Action</label>
+                                      <select formControlName="action">
+                                        @for (opt of actionTypes(); track opt) {
+                                          <option [value]="opt">{{ opt }}</option>
+                                        }
+                                      </select>
+                                    </div>
+                                    <div class="action-params" formGroupName="params">
+                                      @for (field of getComponentToggleActionFieldSpecs(pi, ci, ai); track field.key) {
+                                        <div class="table-param-field">
+                                          <label>{{ field.label }}</label>
+                                          @if (field.kind === 'select') {
+                                            <select [formControlName]="field.key"
+                                              (change)="field.key === 'device' ? onDeviceChange('cmp-toggle-' + pi + '-' + ci, ai, $any($event.target).value) : null">
+                                              @for (opt of getOptionsForField(field, 'cmp-toggle-' + pi + '-' + ci, getComponentToggleActionsArray(pi, ci), ai); track $index) {
+                                                <option [value]="opt.value">{{ opt.label }}</option>
+                                              }
+                                            </select>
+                                          }
+                                          @if (field.kind === 'text') {
+                                            <input type="text" [formControlName]="field.key" />
+                                          }
+                                          @if (field.kind === 'number') {
+                                            <input type="number" [formControlName]="field.key" [min]="field.min ?? null" [max]="field.max ?? null" />
+                                          }
+                                        </div>
+                                      }
+                                    </div>
+                                    <button mat-icon-button type="button" (click)="removeComponentToggleAction(pi, ci, ai)">
+                                      <mat-icon>delete</mat-icon>
+                                    </button>
+                                  </div>
+                                }
+                              </div>
+                              <div class="action-add-row">
+                                <button mat-stroked-button type="button" (click)="addComponentToggleAction(pi, ci)">Add Action</button>
                               </div>
                             </div>
                           }
@@ -721,7 +968,7 @@
     <h2 class="section-title">Audio Settings</h2>
     <div class="source-list" formArrayName="Gains" cdkDropList (cdkDropListDropped)="dropGain($event)">
       @for (gain of gainControls; track gain; let gi = $index) {
-        <div class="source-row" [formGroupName]="gi" cdkDrag>
+        <div class="source-row" [formGroupName]="gi" cdkDrag [class.expanded]="isGainExpanded(gi)">
           <div class="source-drag-handle" cdkDragHandle>
             <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
           </div>
@@ -799,7 +1046,7 @@
     <h2 class="section-title">Devices</h2>
     <div class="source-list" formArrayName="Devices" cdkDropList (cdkDropListDropped)="dropDevice($event)">
       @for (device of deviceControls; track device; let di = $index) {
-        <div class="source-row" [formGroupName]="di" cdkDrag>
+        <div class="source-row" [formGroupName]="di" cdkDrag [class.expanded]="isDeviceExpanded(di)">
           <div class="source-drag-handle" cdkDragHandle>
             <mat-icon class="drag-handle-icon">drag_indicator</mat-icon>
           </div>

@@ -93,7 +93,9 @@ export class EditPage implements OnDestroy {
   loading = signal(true);
   loadError = signal<string | null>(null);
   saving = signal(false);
-  saveSuccess = signal(false);
+  showSaveModal = signal(false);
+  /** TODO: wire to a live status endpoint — true when system is on or room is recording */
+  roomInUse = signal(false);
   saveError = signal<string | null>(null);
   showCancelConfirm = signal(false);
   showDeleteConfirm = signal(false);
@@ -113,14 +115,21 @@ export class EditPage implements OnDestroy {
   /** Route param */
   roomId: string = '';
 
+  /** Template editing mode */
+  templateMode = signal(false);
+  templateId: string = '';
+  editingTemplateName = signal('');
+
   /** Dropdowns */
   roomTypes = signal<string[]>([
     'Classroom',
     'Large Classroom',
     'Conference Room',
     'Lecture Hall',
-    'Seminar room',
-    'All-In-One Conference Room'
+    'Seminar Room',
+    'All-In-One Conference Room',
+    'Science Lab',
+    'Dining Hall'
   ]);
 
   /** Maps "arrayName-index" -> selected deviceId, so template can react to device selection */
@@ -332,18 +341,24 @@ export class EditPage implements OnDestroy {
     SetCameraPreset: [
       {
         key: 'camera', label: 'Camera', kind: 'select', required: true,
-        options: (c) => c.allDevices
-          .filter(d => d.interfaces.some(i => i.toLowerCase() === 'camera'))
-          .map(d => ({ value: d.id, label: d.friendlyName || d.id })),
+        options: (c) => [
+          { value: 'selected', label: 'Selected Camera' },
+          ...c.allDevices
+            .filter(d => d.interfaces.some(i => i.toLowerCase() === 'camera'))
+            .map(d => ({ value: d.id, label: d.friendlyName || d.id })),
+        ],
       },
       { key: 'preset', label: 'Preset', kind: 'text', required: true },
     ],
     RecallCameraPreset: [
       {
         key: 'camera', label: 'Camera', kind: 'select', required: true,
-        options: (c) => c.allDevices
-          .filter(d => d.interfaces.some(i => i.toLowerCase() === 'camera'))
-          .map(d => ({ value: d.id, label: d.friendlyName || d.id })),
+        options: (c) => [
+          { value: 'selected', label: 'Selected Camera' },
+          ...c.allDevices
+            .filter(d => d.interfaces.some(i => i.toLowerCase() === 'camera'))
+            .map(d => ({ value: d.id, label: d.friendlyName || d.id })),
+        ],
       },
       { key: 'preset', label: 'Preset', kind: 'text', required: true },
     ],
@@ -386,6 +401,7 @@ export class EditPage implements OnDestroy {
       // Arrays
       SystemOnActions: this.fb.array([]),
       SystemOffActions: this.fb.array([]),
+      ScheduledActions: this.fb.array([]),
       Sources: this.fb.array([]),
       Devices: this.fb.array([]),
       Gains: this.fb.array([]),
@@ -415,6 +431,7 @@ export class EditPage implements OnDestroy {
   expandedDevices = signal<Set<number>>(new Set());
   expandedGains = signal<Set<number>>(new Set());
   expandedSources = signal<Set<number>>(new Set());
+  expandedScheduled = signal<Set<number>>(new Set());
 
   get devices(): FormArray {
     return this.form.get('Devices') as FormArray;
@@ -570,12 +587,20 @@ export class EditPage implements OnDestroy {
       const id = this.route.snapshot.paramMap.get('id');
       if (!id) {
         this.loading.set(false);
-        this.loadError.set('Missing room id in route.');
+        this.loadError.set('Missing id in route.');
         return;
       }
-  
-      this.roomId = id;
-      this.fetchRoom();
+
+      const isTemplate = this.route.snapshot.routeConfig?.path?.startsWith('edit-template');
+      if (isTemplate) {
+        this.templateMode.set(true);
+        this.templateId = id;
+        this.fetchTemplate();
+      } else {
+        this.roomId = id;
+        this.fetchRoom();
+      }
+
       this.form.valueChanges.subscribe(() => {
         if (this.form.dirty) this.navGuard.setDirty(true);
       });
@@ -598,7 +623,23 @@ export class EditPage implements OnDestroy {
     get systemOffActionControls(): FormGroup[] {
       return (this.systemOffActions?.controls ?? []) as FormGroup[];
     }
-  
+
+    get scheduledActions(): FormArray {
+      return this.form.get('ScheduledActions') as FormArray;
+    }
+
+    get scheduledActionControls(): FormGroup[] {
+      return (this.scheduledActions?.controls ?? []) as FormGroup[];
+    }
+
+    getScheduledActionActionsArray(index: number): FormArray {
+      return this.scheduledActionControls[index].get('actions') as FormArray;
+    }
+
+    getScheduledActionActionsControls(index: number): FormGroup[] {
+      return (this.getScheduledActionActionsArray(index)?.controls ?? []) as FormGroup[];
+    }
+
     get sources(): FormArray {
       return this.form.get('Sources') as FormArray;
     }
@@ -612,6 +653,28 @@ export class EditPage implements OnDestroy {
       return (window as any).API_BASE_URL || 'http://localhost:8080';
     }
   
+    private fetchTemplate(): void {
+      this.loading.set(true);
+      this.loadError.set(null);
+
+      this.http
+        .get<any>(`${this.apiBase()}/templates/${this.templateId}`, { headers: { Authorization: `Bearer ${this.auth.token()}` } })
+        .pipe(finalize(() => this.loading.set(false)))
+        .subscribe({
+          next: (doc) => {
+            try {
+              this.editingTemplateName.set(doc.name ?? '');
+              this.applyConfigToForm(doc.config ?? {});
+            } catch (e: any) {
+              this.loadError.set(e?.message || 'Failed to apply template config to form.');
+            }
+          },
+          error: (err: HttpErrorResponse) => {
+            this.loadError.set(err?.error?.error || err?.message || 'Failed to load template.');
+          },
+        });
+    }
+
     private fetchRoom(): void {
       this.loading.set(true);
       this.loadError.set(null);
@@ -690,6 +753,12 @@ export class EditPage implements OnDestroy {
       // Rebuild action arrays
       this.resetActionsArray(this.systemOnActions, cfg.SystemOnActions);
       this.resetActionsArray(this.systemOffActions, cfg.SystemOffActions);
+
+      // Rebuild ScheduledActions
+      this.scheduledActions.clear();
+      (Array.isArray(cfg?.ScheduledActions) ? cfg.ScheduledActions : []).forEach((s: any) => {
+        this.scheduledActions.push(this.buildScheduledActionGroup(s));
+      });
   
       // Rebuild Sources (object → FormArray)
       this.sources.clear();
@@ -860,17 +929,18 @@ export class EditPage implements OnDestroy {
         Order: [s.Order ?? 0],
         Group: [s.Group ?? 'Sources'],
   
+        HasActions: [Array.isArray(s?.Actions) && s.Actions.length > 0],
         Actions: this.fb.array(
           (Array.isArray(s?.Actions) ? s.Actions : []).map((a: any) =>
             this.createActionGroup(a)
           )
         ),
+        HasHoldActions: [Array.isArray(s?.HoldActions) && s.HoldActions.length > 0],
         HoldActions: this.fb.array(
           (Array.isArray(s?.HoldActions) ? s.HoldActions : []).map((a: any) =>
             this.createActionGroup(a)
           )
         ),
-        HasHoldActions: [Array.isArray(s?.HoldActions) && s.HoldActions.length > 0],
       });
     }
 
@@ -1011,6 +1081,7 @@ export class EditPage implements OnDestroy {
       Description: [seed.Description ?? ''],
       Text:        [seed.Text ?? ''],
       Image:       [seed.Image ?? ''],
+      HasActions:  [Array.isArray(seed.Actions) && seed.Actions.length > 0],
       Actions: this.fb.array(
         (Array.isArray(seed.Actions) ? seed.Actions : []).map((a: any) => this.createActionGroup(a))
       ),
@@ -1091,13 +1162,18 @@ export class EditPage implements OnDestroy {
           this.fb.group({ key: structState(k), value: [v] })
         )
       ),
+      HasActions:    [Array.isArray(seed.Actions) && seed.Actions.length > 0],
       Actions: this.fb.array(
         (Array.isArray(seed.Actions) ? seed.Actions : []).map((a: any) => this.createActionGroup(a))
       ),
+      HasHoldActions: [Array.isArray(seed.HoldActions) && seed.HoldActions.length > 0],
       HoldActions: this.fb.array(
         (Array.isArray(seed.HoldActions) ? seed.HoldActions : []).map((a: any) => this.createActionGroup(a))
       ),
-      HasHoldActions: [Array.isArray(seed.HoldActions) && seed.HoldActions.length > 0],
+      HasToggleActions: [Array.isArray(seed.ToggleActions) && seed.ToggleActions.length > 0],
+      ToggleActions: this.fb.array(
+        (Array.isArray(seed.ToggleActions) ? seed.ToggleActions : []).map((a: any) => this.createActionGroup(a))
+      ),
     });
   }
 
@@ -1162,6 +1238,29 @@ export class EditPage implements OnDestroy {
     this.markDirty();
   }
 
+  getComponentToggleActionsArray(pageIndex: number, compIndex: number): FormArray {
+    return this.getPageComponentsArray(pageIndex)?.at(compIndex)?.get('ToggleActions') as FormArray;
+  }
+
+  addComponentToggleAction(pageIndex: number, compIndex: number): void {
+    this.getComponentToggleActionsArray(pageIndex, compIndex)?.push(this.createActionGroup());
+    this.markDirty();
+  }
+
+  removeComponentToggleAction(pageIndex: number, compIndex: number, actionIndex: number): void {
+    this.getComponentToggleActionsArray(pageIndex, compIndex)?.removeAt(actionIndex);
+    this.markDirty();
+  }
+
+  dropComponentToggleAction(pageIndex: number, compIndex: number, event: CdkDragDrop<any[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const arr = this.getComponentToggleActionsArray(pageIndex, compIndex);
+    const control = arr.at(event.previousIndex);
+    arr.removeAt(event.previousIndex, { emitEvent: false });
+    arr.insert(event.currentIndex, control, { emitEvent: false });
+    this.markDirty();
+  }
+
   getComponentPropertiesArray(pageIndex: number, compIndex: number): FormArray {
     return this.getPageComponentsArray(pageIndex)?.at(compIndex)?.get('Properties') as FormArray;
   }
@@ -1178,6 +1277,12 @@ export class EditPage implements OnDestroy {
 
   getComponentActionFieldSpecs(pageIndex: number, compIndex: number, actionIndex: number): FieldSpec[] {
     const arr = this.getComponentActionsArray(pageIndex, compIndex);
+    if (!arr) return [];
+    return this.getFieldSpecsFor(arr, actionIndex);
+  }
+
+  getComponentToggleActionFieldSpecs(pageIndex: number, compIndex: number, actionIndex: number): FieldSpec[] {
+    const arr = this.getComponentToggleActionsArray(pageIndex, compIndex);
     if (!arr) return [];
     return this.getFieldSpecsFor(arr, actionIndex);
   }
@@ -1243,7 +1348,7 @@ export class EditPage implements OnDestroy {
       return options;
     }
   
-    private markDirty(): void {
+    markDirty(): void {
       this.form.markAsDirty();
       this.navGuard.setDirty(true);
     }
@@ -1272,6 +1377,71 @@ export class EditPage implements OnDestroy {
       this.markDirty();
     }
 
+    readonly daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+
+    private buildScheduledActionGroup(seed: any = {}): FormGroup {
+      const isRecurring = seed.type === 'recurring';
+      const days = seed.days ?? {};
+      return this.fb.group({
+        name: [seed.name ?? ''],
+        type: [isRecurring ? 'recurring' : 'onetime'],
+        date: [seed.date ?? ''],
+        time: [seed.time ?? ''],
+        days: this.fb.group({
+          Mon: [days['Mon'] ?? false],
+          Tue: [days['Tue'] ?? false],
+          Wed: [days['Wed'] ?? false],
+          Thu: [days['Thu'] ?? false],
+          Fri: [days['Fri'] ?? false],
+          Sat: [days['Sat'] ?? false],
+          Sun: [days['Sun'] ?? false],
+        }),
+        actions: this.fb.array(
+          (Array.isArray(seed.actions) ? seed.actions : []).map((a: any) => this.createActionGroup(a))
+        ),
+      });
+    }
+
+    addScheduledAction(): void {
+      this.scheduledActions.push(this.buildScheduledActionGroup());
+      this.expandedScheduled.update(s => { const n = new Set(s); n.add(this.scheduledActions.length - 1); return n; });
+      this.markDirty();
+    }
+
+    removeScheduledAction(index: number): void {
+      this.scheduledActions.removeAt(index);
+      this.expandedScheduled.update(s => { const n = new Set(s); n.delete(index); return n; });
+      this.markDirty();
+    }
+
+    toggleScheduledExpand(index: number): void {
+      this.expandedScheduled.update(s => {
+        const n = new Set(s);
+        n.has(index) ? n.delete(index) : n.add(index);
+        return n;
+      });
+    }
+
+    isScheduledExpanded(index: number): boolean { return this.expandedScheduled().has(index); }
+
+    dropScheduledAction(event: CdkDragDrop<any[]>): void {
+      if (event.previousIndex === event.currentIndex) return;
+      const control = this.scheduledActions.at(event.previousIndex);
+      this.scheduledActions.removeAt(event.previousIndex, { emitEvent: false });
+      this.scheduledActions.insert(event.currentIndex, control, { emitEvent: false });
+      this.markDirty();
+    }
+
+    addScheduledActionAction(schedIndex: number): void {
+      this.getScheduledActionActionsArray(schedIndex).push(this.createActionGroup());
+      this.markDirty();
+    }
+
+    removeScheduledActionAction(schedIndex: number, actionIndex: number): void {
+      this.getScheduledActionActionsArray(schedIndex).removeAt(actionIndex);
+      this.markDirty();
+    }
+
     dropAction(arr: FormArray, event: CdkDragDrop<any[]>): void {
       if (event.previousIndex === event.currentIndex) return;
       const control = arr.at(event.previousIndex);
@@ -1285,7 +1455,12 @@ export class EditPage implements OnDestroy {
     }
 
     goBack(): void {
-      this.router.navigate(['/monitor']);
+      if (this.templateMode()) {
+        const isAdmin = this.auth.user()?.roles?.includes('admin');
+        this.router.navigate([isAdmin ? '/admin/templates' : '/profile']);
+      } else {
+        this.router.navigate(['/monitor']);
+      }
     }
 
     confirmDelete(): void {
@@ -1338,7 +1513,7 @@ export class EditPage implements OnDestroy {
         (Array.isArray(compsArray) ? compsArray : []).reduce((acc: any, c: any) => {
           const key = c.Key; if (!key) return acc;
           const props = (Array.isArray(c.Properties) ? c.Properties : []).reduce((pa: any, p: any) => { if (p.key) pa[p.key] = p.value; return pa; }, {});
-          acc[key] = { IsInvisible: c.IsInvisible, Properties: props, Actions: flattenActions(c.Actions), HoldActions: flattenActions(c.HoldActions), Control: {} };
+          acc[key] = { IsInvisible: c.IsInvisible, Properties: props, Actions: flattenActions(c.Actions), HoldActions: flattenActions(c.HoldActions), ToggleActions: flattenActions(c.ToggleActions), Control: {} };
           return acc;
         }, {});
 
@@ -1410,6 +1585,9 @@ export class EditPage implements OnDestroy {
           (config.SystemOnActions ?? []).forEach((a: any) => this.addActionFromConfig(this.systemOnActions, a));
           this.systemOffActions.clear();
           (config.SystemOffActions ?? []).forEach((a: any) => this.addActionFromConfig(this.systemOffActions, a));
+          this.sources.clear();
+          this.expandedSources.set(new Set());
+          Object.entries(config.Sources ?? {}).forEach(([key, s]) => this.sources.push(this.createSourceGroup(key, s)));
           this.devices.clear();
           this.expandedDevices.set(new Set());
           Object.entries(config.Devices ?? {}).forEach(([key, d]) => this.devices.push(this.buildDeviceGroup(key, d)));
@@ -1437,13 +1615,13 @@ export class EditPage implements OnDestroy {
     }
 
     syncToCore(): void {
+      this.showSaveModal.set(false);
       this.http.post(
         `${this.apiBase()}/rooms/${this.roomId}/sync`,
         {},
         { headers: { Authorization: `Bearer ${this.auth.token()}` } }
       ).subscribe({
-        next: () => alert('Sync request sent to core.'),
-        error: () => alert('Failed to send sync request.'),
+        error: () => this.saveError.set('Sync request failed.'),
       });
     }
   
@@ -1496,7 +1674,7 @@ return (
     onSave(): void {
       if (this.saving()) return;
 
-      if (this.form.invalid) {
+      if (!this.templateMode() && this.form.invalid) {
         this.saveError.set('Please fill in all required fields (Campus, Building, Room, IP).');
         return;
       }
@@ -1559,6 +1737,7 @@ return (
             Properties: props,
             Actions: flattenActions(c.Actions),
             HoldActions: flattenActions(c.HoldActions),
+            ToggleActions: flattenActions(c.ToggleActions),
             Control: {},
           };
           return acc;
@@ -1575,6 +1754,16 @@ return (
         Components: serializeComponents(p.Components),
       }));
 
+      const serializeScheduledActions = (list: any[]) =>
+        (Array.isArray(list) ? list : []).map((s: any) => ({
+          name: s.name ?? '',
+          type: s.type,
+          date: s.date ?? '',
+          time: s.time ?? '',
+          days: s.days ?? {},
+          actions: flattenActions(s.actions),
+        }));
+
       const configToSave = {
         ...raw,
         roomId: this.roomId,
@@ -1582,6 +1771,7 @@ return (
         slaExpireAt: this.toIsoOrNull(raw.slaExpireAt),
         SystemOnActions: flattenActions(raw.SystemOnActions),
         SystemOffActions: flattenActions(raw.SystemOffActions),
+        ScheduledActions: serializeScheduledActions(raw.ScheduledActions),
         Sources: sourcesObject,
         Devices: devicesObject,
         Pages: pagesArray,
@@ -1592,16 +1782,36 @@ return (
         }, {}),
       };
   
+      if (this.templateMode()) {
+        this.http.patch(
+          `${this.apiBase()}/templates/${this.templateId}`,
+          { config: configToSave },
+          { headers: { Authorization: `Bearer ${this.auth.token()}`, 'Content-Type': 'application/json' } }
+        ).subscribe({
+          next: () => {
+            this.saving.set(false);
+            this.saveError.set(null);
+            this.form.markAsPristine();
+            this.navGuard.setDirty(false);
+            this.showSaveModal.set(true);
+          },
+          error: (err: HttpErrorResponse) => {
+            this.saving.set(false);
+            this.saveError.set(err?.error?.error || err?.message || 'Save failed.');
+          },
+        });
+        return;
+      }
+
       const url = `${this.apiBase()}/rooms/${this.roomId}`;
-  
+
       this.http.put(url, configToSave, { headers: { Authorization: `Bearer ${this.auth.token()}` } }).subscribe({
         next: () => {
           this.saving.set(false);
-          this.saveSuccess.set(true);
           this.saveError.set(null);
           this.form.markAsPristine();
           this.navGuard.setDirty(false);
-          setTimeout(() => this.saveSuccess.set(false), 2000);
+          this.showSaveModal.set(true);
         },
         error: (err: HttpErrorResponse) => {
           this.saving.set(false);
@@ -1658,6 +1868,10 @@ return (
       ...raw,
       SystemOnActions: flattenActions(raw.SystemOnActions),
       SystemOffActions: flattenActions(raw.SystemOffActions),
+      ScheduledActions: (Array.isArray(raw.ScheduledActions) ? raw.ScheduledActions : []).map((s: any) => ({
+        type: s.type, date: s.date ?? '', time: s.time ?? '', days: s.days ?? {},
+        actions: flattenActions(s.actions),
+      })),
       Sources: sourcesObject,
       Devices: devicesObject,
       Pages: pagesArray,
