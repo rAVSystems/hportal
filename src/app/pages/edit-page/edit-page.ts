@@ -20,7 +20,6 @@ import { finalize } from 'rxjs/operators';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { IconPickerComponent } from '../../components/icon-picker/icon-picker';
-import { Rick } from '../../components/rick/rick';
 import { AuthService } from '../../services/auth-service';
 import { NavigationGuardService } from '../../services/navigation-guard.service';
 
@@ -38,6 +37,9 @@ type ActionType =
   | 'HidePage'
   | 'StartAutoshutdown'
   | 'SetGain'
+  | 'MuteGain'
+  | 'UnmuteGain'
+  | 'ToggleMuteGain'
   | 'SetCameraPreset'
   | 'RecallCameraPreset'
   | 'RecallSnapshot';
@@ -83,8 +85,7 @@ type FieldSpec = {
     MatNativeDateModule,
     DragDropModule,
     MatCheckboxModule,
-    IconPickerComponent,
-    Rick,],
+    IconPickerComponent,],
   templateUrl: './edit-page.html',
   styleUrl: './edit-page.scss',
 })
@@ -111,6 +112,9 @@ export class EditPage implements OnDestroy {
   savingTemplate = signal(false);
   saveTemplateError = signal<string | null>(null);
   readonly panelOpenState = signal(false);
+  activeSection = signal<string>('section-system-settings');
+  private sectionObserver?: IntersectionObserver;
+
 
   /** Route param */
   roomId: string = '';
@@ -365,6 +369,33 @@ export class EditPage implements OnDestroy {
     RecallSnapshot: [
       { key: 'snapshot', label: 'Snapshot', kind: 'text', required: true },
     ],
+    MuteGain: [
+      {
+        key: 'gain',
+        label: 'Gain',
+        kind: 'select',
+        required: true,
+        options: (c) => c.gainIds.map((g) => ({ value: g, label: g })),
+      },
+    ],
+    UnmuteGain: [
+      {
+        key: 'gain',
+        label: 'Gain',
+        kind: 'select',
+        required: true,
+        options: (c) => c.gainIds.map((g) => ({ value: g, label: g })),
+      },
+    ],
+    ToggleMuteGain: [
+      {
+        key: 'gain',
+        label: 'Gain',
+        kind: 'select',
+        required: true,
+        options: (c) => c.gainIds.map((g) => ({ value: g, label: g })),
+      },
+    ],
   };
 
   readonly actionTypes = signal<ActionType[]>(
@@ -604,6 +635,32 @@ export class EditPage implements OnDestroy {
       this.form.valueChanges.subscribe(() => {
         if (this.form.dirty) this.navGuard.setDirty(true);
       });
+
+      const sectionIds = [
+        'section-system-settings', 'section-system-on', 'section-system-off',
+        'section-scheduled', 'section-sources', 'section-pages',
+        'section-audio', 'section-devices',
+      ];
+
+      this.sectionObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const el = entry.target as HTMLElement;
+          el.dataset['visible'] = entry.isIntersecting ? '1' : '0';
+        });
+        // Pick the first visible section in document order
+        const first = sectionIds.find(id => {
+          const el = document.getElementById(id);
+          return el?.dataset['visible'] === '1';
+        });
+        if (first) this.activeSection.set(first);
+      }, { threshold: 0, rootMargin: '0px 0px -60% 0px' });
+
+      setTimeout(() => {
+        sectionIds.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) this.sectionObserver!.observe(el);
+        });
+      }, 500);
     }
   
     /** Convenience getters used by the template */
@@ -1355,6 +1412,7 @@ export class EditPage implements OnDestroy {
 
     ngOnDestroy(): void {
       this.navGuard.setDirty(false);
+      this.sectionObserver?.disconnect();
     }
 
     addSystemOnAction(): void {
@@ -1820,118 +1878,6 @@ return (
       });
     }
   
-    /** Returns current form value serialized as config — passed to Rick for context */
-  get currentConfig(): any {
-    const raw = this.form.getRawValue() as any;
-
-    const flattenActions = (list: any[]) =>
-      (Array.isArray(list) ? list : []).map((row) => ({
-        action: row?.action,
-        ...(row?.params ?? {}),
-      }));
-
-    const serializeComponents = (compsArray: any[]) =>
-      (Array.isArray(compsArray) ? compsArray : []).reduce((acc: any, c: any) => {
-        const key = c.Key;
-        if (!key) return acc;
-        const props = (Array.isArray(c.Properties) ? c.Properties : []).reduce((pa: any, p: any) => {
-          if (p.key) pa[p.key] = p.value;
-          return pa;
-        }, {});
-        acc[key] = { IsInvisible: c.IsInvisible, Properties: props, Actions: flattenActions(c.Actions), Control: {} };
-        return acc;
-      }, {});
-
-    const sourcesObject = (Array.isArray(raw.Sources) ? raw.Sources : []).reduce((acc: any, s: any) => {
-      const key = s.Key || s.Control;
-      const { Key, ...rest } = { ...s, Actions: flattenActions(s?.Actions) };
-      acc[key] = rest;
-      return acc;
-    }, {});
-
-    const devicesObject = (Array.isArray(raw.Devices) ? raw.Devices : []).reduce((acc: any, d: any) => {
-      const key = d.key;
-      if (!key) return acc;
-      const { key: _, Interfaces, ...rest } = d;
-      acc[key] = { ...rest, Interfaces: Object.entries(Interfaces ?? {}).filter(([, v]) => v).map(([k]) => k) };
-      return acc;
-    }, {});
-
-    const pagesArray = (Array.isArray(raw.Pages) ? raw.Pages : []).map((p: any) => ({
-      Id: p.Id, Title: p.Title, Subtitle: p.Subtitle, Description: p.Description,
-      Text: p.Text, Image: p.Image,
-      Actions: flattenActions(p.Actions),
-      Components: serializeComponents(p.Components),
-    }));
-
-    return {
-      ...raw,
-      SystemOnActions: flattenActions(raw.SystemOnActions),
-      SystemOffActions: flattenActions(raw.SystemOffActions),
-      ScheduledActions: (Array.isArray(raw.ScheduledActions) ? raw.ScheduledActions : []).map((s: any) => ({
-        type: s.type, date: s.date ?? '', time: s.time ?? '', days: s.days ?? {},
-        actions: flattenActions(s.actions),
-      })),
-      Sources: sourcesObject,
-      Devices: devicesObject,
-      Pages: pagesArray,
-      Gains: (Array.isArray(raw.Gains) ? raw.Gains : []).reduce((acc: any, g: any) => {
-        const key = g.key; if (!key) return acc;
-        const { key: _, ...rest } = g; acc[key] = rest; return acc;
-      }, {}),
-    };
-  }
-
-  /** Called by Rick when the AI returns tool_use blocks */
-  applyToolCall(tc: { name: string; input: Record<string, any> }): void {
-    const { name, input } = tc;
-
-    if (name === 'set_system_setting') {
-      this.form.get(input['field'])?.setValue(input['value']);
-      return;
-    }
-
-    if (name === 'set_source_field') {
-      const idx = (this.sources.controls as FormGroup[])
-        .findIndex(g => g.get('Key')?.value === input['sourceKey'] || g.get('Control')?.value === input['sourceKey']);
-      if (idx >= 0) (this.sources.at(idx) as FormGroup).get(input['field'])?.setValue(input['value']);
-      return;
-    }
-
-    if (name === 'set_device_field') {
-      const idx = (this.devices.controls as FormGroup[])
-        .findIndex(g => g.get('key')?.value === input['deviceKey']);
-      if (idx >= 0) (this.devices.at(idx) as FormGroup).get(input['field'])?.setValue(input['value']);
-      return;
-    }
-
-    if (name === 'set_gain_field') {
-      const gains = this.form.get('Gains') as FormArray;
-      const idx = (gains.controls as FormGroup[])
-        .findIndex(g => g.get('key')?.value === input['gainKey']);
-      if (idx >= 0) (gains.at(idx) as FormGroup).get(input['field'])?.setValue(input['value']);
-      return;
-    }
-
-    if (name === 'set_page_field') {
-      const idx = (this.pages.controls as FormGroup[])
-        .findIndex(g => g.get('Id')?.value === input['pageId']);
-      if (idx >= 0) (this.pages.at(idx) as FormGroup).get(input['field'])?.setValue(input['value']);
-      return;
-    }
-
-    if (name === 'set_component_field') {
-      const pageIdx = (this.pages.controls as FormGroup[])
-        .findIndex(g => g.get('Id')?.value === input['pageId']);
-      if (pageIdx < 0) return;
-      const comps = this.getPageComponentsArray(pageIdx);
-      const compIdx = (comps.controls as FormGroup[])
-        .findIndex(g => g.get('Key')?.value === input['componentKey']);
-      if (compIdx >= 0) (comps.at(compIdx) as FormGroup).get(input['field'])?.setValue(input['value']);
-      return;
-    }
-  }
-
   private parseDate(value: any): Date | null {
       if (!value) return null;
   

@@ -27,84 +27,55 @@
 
 <div class="profile-page">
 
+  <!-- Profile -->
   <div class="page-section">
     <div class="section-header">
       <button mat-icon-button (click)="goBack()"><mat-icon>arrow_back</mat-icon></button>
       <h2 class="section-title">My Profile</h2>
     </div>
-
     <div class="profile-body">
 
       <!-- Username -->
       <div class="profile-card">
         <h3 class="card-title">Username</h3>
         <div class="field-row">
-          <input
-            class="inline-input"
-            type="text"
-            placeholder="New username"
-            [value]="newUsername()"
-            (input)="newUsername.set($any($event.target).value)"
-          />
+          <input class="inline-input" type="text" placeholder="New username" [value]="newUsername()" (input)="newUsername.set($any($event.target).value)" />
           <button mat-flat-button color="primary" (click)="saveUsername()" [disabled]="savingUsername()">
             @if (savingUsername()) { Saving… } @else { Save }
           </button>
         </div>
-        @if (usernameError()) {
-          <p class="field-error">{{ usernameError() }}</p>
-        }
-        @if (usernameSuccess()) {
-          <p class="field-success">Username updated.</p>
-        }
+        @if (usernameError()) { <p class="field-error">{{ usernameError() }}</p> }
+        @if (usernameSuccess()) { <p class="field-success">Username updated.</p> }
       </div>
 
       <!-- Password -->
       <div class="profile-card">
         <h3 class="card-title">Change Password</h3>
         <div class="field-col">
-          <input
-            class="inline-input"
-            type="password"
-            placeholder="New password"
-            [value]="newPassword()"
-            (input)="newPassword.set($any($event.target).value)"
-          />
-          <input
-            class="inline-input"
-            type="password"
-            placeholder="Confirm new password"
-            [value]="confirmPassword()"
-            (input)="confirmPassword.set($any($event.target).value)"
-          />
+          <input class="inline-input" type="password" placeholder="New password" [value]="newPassword()" (input)="newPassword.set($any($event.target).value)" />
+          <input class="inline-input" type="password" placeholder="Confirm new password" [value]="confirmPassword()" (input)="confirmPassword.set($any($event.target).value)" />
           <button mat-flat-button color="primary" (click)="savePassword()" [disabled]="savingPassword()">
             @if (savingPassword()) { Saving… } @else { Save Password }
           </button>
         </div>
-        @if (passwordError()) {
-          <p class="field-error">{{ passwordError() }}</p>
-        }
-        @if (passwordSuccess()) {
-          <p class="field-success">Password updated.</p>
-        }
+        @if (passwordError()) { <p class="field-error">{{ passwordError() }}</p> }
+        @if (passwordSuccess()) { <p class="field-success">Password updated.</p> }
       </div>
 
     </div>
   </div>
 
-  <!-- Templates -->
+  <!-- My Templates -->
   <div class="page-section templates-section">
     <div class="section-header">
       <h2 class="section-title">My Templates</h2>
       <button mat-stroked-button (click)="loadTemplates()">
-        <mat-icon>refresh</mat-icon>
-        Refresh
+        <mat-icon>refresh</mat-icon> Refresh
       </button>
     </div>
-
     @if (templatesError()) {
       <div class="error-banner">{{ templatesError() }}</div>
     }
-
     <div class="table-wrapper">
       <table class="users-table">
         <thead>
@@ -121,28 +92,14 @@
               <td class="username-cell">
                 @if (stateFor(t._id).editingName) {
                   <div class="inline-edit-row">
-                    <input
-                      class="inline-input"
-                      type="text"
-                      [(ngModel)]="stateFor(t._id).pendingName"
-                      (keydown.enter)="saveName(t._id)"
-                      (keydown.escape)="cancelEditName(t._id)"
-                      [disabled]="stateFor(t._id).saving"
-                      autofocus
-                    />
-                    <button mat-icon-button class="icon-btn-sm" title="Save" (click)="saveName(t._id)" [disabled]="stateFor(t._id).saving">
-                      <mat-icon>check</mat-icon>
-                    </button>
-                    <button mat-icon-button class="icon-btn-sm" title="Cancel" (click)="cancelEditName(t._id)" [disabled]="stateFor(t._id).saving">
-                      <mat-icon>close</mat-icon>
-                    </button>
+                    <input class="inline-input" type="text" [(ngModel)]="stateFor(t._id).pendingName" (keydown.enter)="saveName(t._id)" (keydown.escape)="cancelEditName(t._id)" [disabled]="stateFor(t._id).saving" autofocus />
+                    <button mat-icon-button class="icon-btn-sm" title="Save" (click)="saveName(t._id)" [disabled]="stateFor(t._id).saving"><mat-icon>check</mat-icon></button>
+                    <button mat-icon-button class="icon-btn-sm" title="Cancel" (click)="cancelEditName(t._id)" [disabled]="stateFor(t._id).saving"><mat-icon>close</mat-icon></button>
                   </div>
                 } @else {
                   <div class="username-display">
                     <span>{{ t.name }}</span>
-                    <button mat-icon-button class="icon-btn-sm edit-icon" title="Rename" (click)="startEditName(t._id, t.name)">
-                      <mat-icon>edit</mat-icon>
-                    </button>
+                    <button mat-icon-button class="icon-btn-sm edit-icon" title="Rename" (click)="startEditName(t._id, t.name)"><mat-icon>edit</mat-icon></button>
                   </div>
                 }
               </td>
@@ -150,26 +107,191 @@
               <td class="date-cell">{{ formatDate(t.created) }}</td>
               <td class="actions-cell">
                 @if (t.createdby === auth.user()?.username) {
-                  <button mat-stroked-button class="edit-btn" (click)="editTemplate(t._id)">
-                    <mat-icon>edit</mat-icon>
-                    Edit
-                  </button>
+                  <button mat-stroked-button class="edit-btn" (click)="editTemplate(t._id)"><mat-icon>edit</mat-icon> Edit</button>
                 }
-                <button mat-stroked-button class="delete-btn" (click)="promptDelete(t._id)" [disabled]="t.permission === 'admin'">
-                  <mat-icon>delete</mat-icon>
-                  Delete
-                </button>
+                <button mat-stroked-button class="delete-btn" (click)="promptDelete(t._id)" [disabled]="t.permission === 'admin'"><mat-icon>delete</mat-icon> Delete</button>
               </td>
             </tr>
           }
           @if (templates().length === 0 && !templatesLoading()) {
-            <tr>
-              <td colspan="4" class="empty-row">No templates yet.</td>
-            </tr>
+            <tr><td colspan="4" class="empty-row">No templates yet.</td></tr>
           }
         </tbody>
       </table>
     </div>
   </div>
+
+  <!-- Admin-only sections -->
+  @if (auth.hasRole('admin')) {
+
+    <!-- OpenClaw -->
+    <div class="page-section">
+      <div class="section-header">
+        <h2 class="section-title">OpenClaw</h2>
+        <div class="openclaw-status">
+          <span class="status-dot" [class.running]="openclawRunning() === true" [class.stopped]="openclawRunning() === false"></span>
+          <span class="status-label">{{ openclawRunning() === null ? 'Checking…' : openclawRunning() ? 'Running' : 'Stopped' }}</span>
+          @if (openclawRunning() === true && openclawDashboardUrl()) {
+            <a class="dashboard-link" [href]="openclawDashboardUrl()!" target="_blank" rel="noopener">Dashboard</a>
+          }
+        </div>
+        <div style="flex:1"></div>
+        @if (openclawRunning() === false) {
+          <button mat-stroked-button (click)="startOpenclaw()" [disabled]="openclawActionBusy()">
+            <mat-icon>play_arrow</mat-icon> Start
+          </button>
+        }
+        @if (openclawRunning() === true) {
+          <button mat-stroked-button color="warn" (click)="stopOpenclaw()" [disabled]="openclawActionBusy()">
+            <mat-icon>stop</mat-icon> Stop
+          </button>
+        }
+      </div>
+      <div class="profile-body">
+
+        <div class="profile-card">
+          <h3 class="card-title">Language Model</h3>
+          <div class="field-col">
+            <select class="inline-input" (change)="onProviderChange($any($event.target).value)">
+              <option value="">Select provider…</option>
+              @for (opt of llmOptions; track opt.value) {
+                <option [value]="opt.value" [selected]="opt.value === llmProvider()">{{ opt.label }}</option>
+              }
+            </select>
+            @if (llmProvider()) {
+              <select class="inline-input" (change)="llmModel.set($any($event.target).value)">
+                <option value="">Select model…</option>
+                @for (m of filteredModels(); track m) {
+                  <option [value]="m" [selected]="m === llmModel()">{{ m }}</option>
+                }
+              </select>
+              <input class="inline-input" type="password"
+                placeholder="API Key"
+                [value]="llmApiKey()"
+                (focus)="llmApiKey() === MASKED_KEY && llmApiKey.set('')"
+                (blur)="!llmApiKey() && llmKeyIsSet() && llmApiKey.set(MASKED_KEY)"
+                (input)="llmApiKey.set($any($event.target).value)" />
+            }
+          </div>
+          <div class="card-footer">
+            <button mat-flat-button color="primary" (click)="saveOpenClaw()" [disabled]="openclawSaving()">
+              @if (openclawSaving()) { Saving… } @else { Save Settings }
+            </button>
+            @if (openclawError()) { <p class="field-error">{{ openclawError() }}</p> }
+            @if (openclawSuccess()) { <p class="field-success">{{ openclawSuccess() }}</p> }
+          </div>
+        </div>
+
+        <div class="profile-card">
+          <h3 class="card-title">Channels</h3>
+          <div class="channels-grid">
+            @for (ch of allChannels; track ch.value) {
+              <label class="checkbox-row">
+                <input type="checkbox" [checked]="isChannelEnabled(ch.value)" (change)="toggleChannel(ch.value)" />
+                {{ ch.label }}
+              </label>
+              <div class="pairing-key-cell">
+                @if (isChannelEnabled(ch.value)) {
+                  <input class="inline-input" type="password"
+                    [placeholder]="tokenSetFor(ch.value) ? '•••••••••••••••• (token saved)' : ch.label + ' Bot Token'"
+                    [value]="tokenFor(ch.value)"
+                    (focus)="tokenFor(ch.value) === '••••••••••••••••' && setChannelToken(ch.value, '')"
+                    (blur)="!tokenFor(ch.value) && tokenSetFor(ch.value) && setChannelToken(ch.value, '••••••••••••••••')"
+                    (input)="setChannelToken(ch.value, $any($event.target).value)" />
+                }
+              </div>
+            }
+          </div>
+          <div class="card-footer">
+            <button mat-flat-button color="primary" (click)="saveChannels()" [disabled]="channelsSaving()">
+              @if (channelsSaving()) { Saving… } @else { Save Settings }
+            </button>
+            @if (channelsError()) { <p class="field-error">{{ channelsError() }}</p> }
+            @if (channelsSuccess()) { <p class="field-success">{{ channelsSuccess() }}</p> }
+          </div>
+          @if (pairingRequests().length > 0) {
+            <div class="pairing-requests">
+              <h4 class="pairing-title">Pending Pairing Requests</h4>
+              @for (req of pairingRequests(); track req.code) {
+                <div class="pairing-row">
+                  <span class="pairing-user">{{ req.meta?.name || req.id }}</span>
+                  <span class="pairing-code">{{ req.code }}</span>
+                  <button mat-stroked-button color="primary" (click)="approvePairing(req.code, req.channel || 'discord')" [disabled]="approvingCode() === req.code">
+                    @if (approvingCode() === req.code) { Approving… } @else { Approve }
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+      </div>
+      <div class="profile-body skills-body">
+        <div class="profile-card full-width">
+          <h3 class="card-title">Skills</h3>
+          <div class="skills-grid">
+            @for (skill of allSkills; track skill.id) {
+              <label class="skill-row">
+                <input type="checkbox" [checked]="isSkillEnabled(skill.id)" (change)="toggleSkill(skill.id)" />
+                <div class="skill-text">
+                  <span class="skill-label">{{ skill.label }}</span>
+                  <span class="skill-desc">{{ skill.description }}</span>
+                </div>
+              </label>
+            }
+          </div>
+          <div class="card-footer">
+            <button mat-flat-button color="primary" (click)="saveSkills()" [disabled]="skillsSaving()">
+              @if (skillsSaving()) { Saving… } @else { Save Settings }
+            </button>
+            @if (skillsError()) { <p class="field-error">{{ skillsError() }}</p> }
+            @if (skillsSuccess()) { <p class="field-success">{{ skillsSuccess() }}</p> }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- API + MQTT side by side -->
+    <div class="page-section">
+      <div class="section-header">
+        <h2 class="section-title">Integrations</h2>
+      </div>
+      <div class="profile-body">
+
+        <div class="profile-card">
+          <h3 class="card-title">API Credentials</h3>
+          <div class="field-col">
+            <input class="inline-input input-readonly" type="text" value="api" readonly />
+            <input class="inline-input" type="password" placeholder="New Password" [value]="apiPassword()" (input)="apiPassword.set($any($event.target).value)" autocomplete="new-password" />
+            <input class="inline-input" type="password" placeholder="Confirm Password" [value]="apiPasswordConfirm()" (input)="apiPasswordConfirm.set($any($event.target).value)" autocomplete="new-password" />
+          </div>
+          <div class="card-footer">
+            <button mat-flat-button color="primary" (click)="saveApiCredentials()" [disabled]="apiSaving() || !apiPassword().trim()">
+              @if (apiSaving()) { Saving… } @else { Save Settings }
+            </button>
+            @if (apiError()) { <p class="field-error">{{ apiError() }}</p> }
+            @if (apiSuccess()) { <p class="field-success">Saved.</p> }
+          </div>
+        </div>
+
+        <div class="profile-card">
+          <h3 class="card-title">MQTT Broker</h3>
+          <div class="field-col">
+            <input class="inline-input" type="text" placeholder="Username" [value]="mqttUsername()" (input)="mqttUsername.set($any($event.target).value)" autocomplete="off" />
+            <input class="inline-input" type="password" placeholder="Password" [value]="mqttPassword()" (input)="mqttPassword.set($any($event.target).value)" autocomplete="new-password" />
+          </div>
+          <div class="card-footer">
+            <button mat-flat-button color="primary" (click)="saveMqttCredentials()" [disabled]="mqttSaving() || !mqttUsername().trim()">
+              @if (mqttSaving()) { Saving… } @else { Save Settings }
+            </button>
+            @if (mqttError()) { <p class="field-error">{{ mqttError() }}</p> }
+            @if (mqttSuccess()) { <p class="field-success">Saved.</p> }
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  }
 
 </div>

@@ -7,6 +7,7 @@ export type Role = 'admin' | 'editor' | 'viewer';
 export interface AuthUser {
   username: string;
   roles: Role[];
+  mustChangePassword?: boolean;
 }
 
 export interface AuthResponse {

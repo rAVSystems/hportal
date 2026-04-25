@@ -1,5 +1,62 @@
+@if (showIntro()) {
+  <div class="intro-overlay" [class.fading]="introFading()">
+    <img class="intro-shield" src="harvard-shield.png" alt="Harvard Shield" />
+    <img class="intro-logo" src="harvard-logo.png" alt="Harvard Logo" />
+  </div>
+} @else {
 
-<div class="monitor-page">
+@if (showNewRoom()) {
+  <div class="new-room-backdrop">
+    <div class="new-room-modal">
+      <div class="new-room-header">
+        <button mat-icon-button type="button" (click)="closeNewRoom()">
+          <mat-icon>close</mat-icon>
+        </button>
+        <h2 class="new-room-title">New Room</h2>
+      </div>
+      <div class="new-room-fields">
+        <div class="field-group">
+          <label>Campus</label>
+          <input type="text" placeholder="e.g. Main Campus" [value]="newCampus()" (input)="newCampus.set($any($event.target).value)" />
+        </div>
+        <div class="field-group">
+          <label>Building</label>
+          <input type="text" placeholder="e.g. Harvard Hall" [value]="newBuilding()" (input)="newBuilding.set($any($event.target).value)" />
+        </div>
+        <div class="field-group">
+          <label>Room</label>
+          <input type="text" placeholder="e.g. 101" [value]="newRoom()" (input)="newRoom.set($any($event.target).value)" />
+        </div>
+        <div class="field-group">
+          <label>IP Address</label>
+          <input type="text" placeholder="e.g. 192.168.1.100" [value]="newIp()" (input)="newIp.set($any($event.target).value)" />
+        </div>
+        <div class="field-group">
+          <label>Template <span class="optional">(optional)</span></label>
+          <select [value]="newTemplateId()" (change)="newTemplateId.set($any($event.target).value)">
+            <option value="">No template — blank room</option>
+            @for (t of templates(); track t._id) {
+              <option [value]="t._id">{{ t.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      @if (newRoomError()) {
+        <p class="new-room-error">{{ newRoomError() }}</p>
+      }
+      <div class="new-room-actions">
+        <button mat-stroked-button type="button" (click)="customizeRoom()" [disabled]="!newRoomFormValid || newRoomSaving()">
+          Customize
+        </button>
+        <button mat-flat-button color="primary" type="button" (click)="createRoom()" [disabled]="!newRoomFormValid || newRoomSaving()">
+          @if (newRoomSaving()) { Creating… } @else { Create Room }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<div class="monitor-page" [class.blurred]="showNewRoom()">
   <div class="toolbar-wrapper">
     <div class="toolbar" [class.open]="filtersOpen()">
       <div class="search-wrap">
@@ -12,15 +69,16 @@
             [ngModel]="searchText()"
             (ngModelChange)="searchText.set($event)"
           />
+          @if (searchText()) {
           <button
             mat-icon-button
             matSuffix
             aria-label="Clear search"
-            *ngIf="searchText()"
             (click)="searchText.set('')"
           >
             <mat-icon>close</mat-icon>
           </button>
+          }
         </mat-form-field>
       </div>
 
@@ -75,7 +133,12 @@
   <div class="room-grid">
     <div class="dashboard-header">
       <h2>Dashboard</h2>
-      <button mat-flat-button color="primary" (click)="goToNewRoom()">
+      <div class="mqtt-status" [class.connected]="mqtt.connected()" [title]="mqtt.connected() ? 'MQTT connected' : 'MQTT disconnected'">
+        <span class="mqtt-dot"></span>
+        <span class="mqtt-label">{{ mqtt.connected() ? 'Online' : 'Offline' }}</span>
+      </div>
+      <div style="flex:1"></div>
+      <button mat-flat-button color="primary" (click)="openNewRoom()">
         New Room <mat-icon>add</mat-icon>
       </button>
     </div>
@@ -84,3 +147,5 @@
     }
   </div>
 </div>
+
+}

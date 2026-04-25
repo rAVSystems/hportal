@@ -4,6 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 
+interface TemplateDoc {
+  _id: string;
+  name: string;
+}
+
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -12,6 +17,7 @@ import { MatButtonModule } from '@angular/material/button';
 
 import { AuthService } from '../../services/auth-service';
 import { RoomCard } from '../../components/room-card/room-card';
+import { MqttService } from '../../services/mqtt.service';
 
 export type RoomDoc = {
   _id: string;
@@ -48,6 +54,23 @@ export class MonitorPage implements OnInit {
   rooms = signal<RoomDoc[]>([]);
   isLoading = signal(false);
   errorMessage = signal<string>('');
+  showIntro = signal(true);
+  introFading = signal(false);
+
+  // New room modal
+  showNewRoom = signal(false);
+  newCampus = signal('');
+  newBuilding = signal('');
+  newRoom = signal('');
+  newIp = signal('');
+  newTemplateId = signal('');
+  templates = signal<TemplateDoc[]>([]);
+  newRoomSaving = signal(false);
+  newRoomError = signal<string | null>(null);
+
+  get newRoomFormValid(): boolean {
+    return !!this.newCampus().trim() && !!this.newBuilding().trim() && !!this.newRoom().trim() && !!this.newIp().trim();
+  }
 
   // Search + filters
   searchText = signal('');
@@ -116,15 +139,107 @@ export class MonitorPage implements OnInit {
   constructor(
     private http: HttpClient,
     public auth: AuthService,
-    private router: Router
+    private router: Router,
+    public mqtt: MqttService,
   ) {}
 
-  goToNewRoom(): void {
-    this.router.navigate(['/newroom']);
+  openNewRoom(): void {
+    this.newCampus.set('');
+    this.newBuilding.set('');
+    this.newRoom.set('');
+    this.newIp.set('');
+    this.newTemplateId.set('');
+    this.newRoomError.set(null);
+    this.showNewRoom.set(true);
+    this.http.get<TemplateDoc[]>(`${this.apiBase}/templates`, {
+      headers: { Authorization: `Bearer ${this.auth.token()}` }
+    }).subscribe({
+      next: (data) => this.templates.set(data),
+      error: () => {}
+    });
+  }
+
+  closeNewRoom(): void {
+    this.showNewRoom.set(false);
+  }
+
+  private buildNewRoomConfig(templateConfig: any = {}): any {
+    return {
+      ...templateConfig,
+      campus: this.newCampus().trim(),
+      building: this.newBuilding().trim(),
+      room: this.newRoom().trim(),
+      ip: this.newIp().trim(),
+    };
+  }
+
+  private withTemplate(fn: (config: any) => void): void {
+    const templateId = this.newTemplateId();
+    if (templateId) {
+      this.http.get<any>(`${this.apiBase}/templates/${templateId}`, {
+        headers: { Authorization: `Bearer ${this.auth.token()}` }
+      }).subscribe({
+        next: (tmpl) => fn(tmpl.config ?? {}),
+        error: () => {
+          this.newRoomSaving.set(false);
+          this.newRoomError.set('Failed to load template.');
+        }
+      });
+    } else {
+      fn({});
+    }
+  }
+
+  createRoom(): void {
+    if (!this.newRoomFormValid || this.newRoomSaving()) return;
+    this.newRoomSaving.set(true);
+    this.newRoomError.set(null);
+    this.withTemplate((tmplConfig) => {
+      const config = this.buildNewRoomConfig(tmplConfig);
+      this.http.post<{ roomId: string }>(`${this.apiBase}/rooms`, config, {
+        headers: { Authorization: `Bearer ${this.auth.token()}` }
+      }).subscribe({
+        next: () => {
+          this.newRoomSaving.set(false);
+          this.showNewRoom.set(false);
+          this.loadRooms();
+        },
+        error: (err) => {
+          this.newRoomSaving.set(false);
+          this.newRoomError.set(err?.error?.error || 'Failed to create room.');
+        }
+      });
+    });
+  }
+
+  customizeRoom(): void {
+    if (!this.newRoomFormValid || this.newRoomSaving()) return;
+    this.newRoomSaving.set(true);
+    this.newRoomError.set(null);
+    this.withTemplate((tmplConfig) => {
+      const config = this.buildNewRoomConfig(tmplConfig);
+      this.http.post<{ roomId: string }>(`${this.apiBase}/rooms`, config, {
+        headers: { Authorization: `Bearer ${this.auth.token()}` }
+      }).subscribe({
+        next: (res) => {
+          this.newRoomSaving.set(false);
+          this.showNewRoom.set(false);
+          this.router.navigate(['/edit', res.roomId]);
+        },
+        error: (err) => {
+          this.newRoomSaving.set(false);
+          this.newRoomError.set(err?.error?.error || 'Failed to create room.');
+        }
+      });
+    });
   }
 
   ngOnInit(): void {
     this.loadRooms();
+    setTimeout(() => {
+      this.introFading.set(true);
+      setTimeout(() => this.showIntro.set(false), 800);
+    }, 3000);
   }
 
   loadRooms(): void {

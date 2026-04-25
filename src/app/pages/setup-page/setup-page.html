@@ -1,0 +1,153 @@
+<div class="setup-shell">
+  <div class="setup-card">
+    <div class="setup-logo">
+      <mat-icon>settings_applications</mat-icon>
+      <span>Portal Setup</span>
+    </div>
+
+    <!-- Step indicators -->
+    <div class="step-indicators">
+      <div class="step-dot" [class.active]="step() >= 1" [class.done]="step() > 1">
+        @if (step() > 1) { <mat-icon>check</mat-icon> } @else { 1 }
+      </div>
+      <div class="step-line" [class.done]="step() > 1"></div>
+      <div class="step-dot" [class.active]="step() >= 2" [class.done]="step() > 2">
+        @if (step() > 2) { <mat-icon>check</mat-icon> } @else { 2 }
+      </div>
+      <div class="step-line" [class.done]="step() > 2"></div>
+      <div class="step-dot" [class.active]="step() >= 3">3</div>
+    </div>
+
+    <!-- Step 1: Admin account -->
+    @if (step() === 1) {
+      <h2 class="step-title">Create Admin Account</h2>
+      <p class="step-sub">This will be the primary administrator for the portal.</p>
+
+      <div class="field-stack">
+        <mat-form-field appearance="outline">
+          <mat-label>Username</mat-label>
+          <input matInput [value]="adminUsername()" (input)="adminUsername.set($any($event.target).value)" autocomplete="off" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Password</mat-label>
+          <input matInput [type]="showAdminPw() ? 'text' : 'password'" [value]="adminPassword()" (input)="adminPassword.set($any($event.target).value)" autocomplete="new-password" />
+          <button mat-icon-button matSuffix type="button" (click)="showAdminPw.set(!showAdminPw())">
+            <mat-icon>{{ showAdminPw() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <mat-hint>Minimum 8 characters</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Confirm Password</mat-label>
+          <input matInput [type]="showAdminPwConfirm() ? 'text' : 'password'" [value]="adminPasswordConfirm()" (input)="adminPasswordConfirm.set($any($event.target).value)" autocomplete="new-password" />
+          <button mat-icon-button matSuffix type="button" (click)="showAdminPwConfirm.set(!showAdminPwConfirm())">
+            <mat-icon>{{ showAdminPwConfirm() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          @if (step1PasswordMismatch) {
+            <mat-error>Passwords do not match</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      @if (step1Error()) {
+        <p class="error-msg">{{ step1Error() }}</p>
+      }
+
+      <button mat-flat-button color="primary" class="cta-btn" (click)="createAdmin()" [disabled]="!step1Valid || step1Loading()">
+        @if (step1Loading()) { Creating… } @else { Continue }
+        <mat-icon>arrow_forward</mat-icon>
+      </button>
+    }
+
+    <!-- Step 2: API credentials -->
+    @if (step() === 2) {
+      <h2 class="step-title">Portal Settings</h2>
+      <p class="step-sub">Configure your portal name and integrations. Credentials can be updated later in admin settings.</p>
+
+      <div class="field-stack">
+        <mat-form-field appearance="outline">
+          <mat-label>Portal Name *</mat-label>
+          <input matInput placeholder="e.g. AV Stack Portal" [value]="portalName()" (input)="portalName.set($any($event.target).value)" />
+        </mat-form-field>
+
+        <div class="section-label">API Credentials <span class="optional">(optional)</span></div>
+        <div class="field-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Username</mat-label>
+            <input matInput [value]="apiUsername()" (input)="apiUsername.set($any($event.target).value)" autocomplete="off" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input matInput [type]="showApiPw() ? 'text' : 'password'" [value]="apiPassword()" (input)="apiPassword.set($any($event.target).value)" autocomplete="new-password" />
+            <button mat-icon-button matSuffix type="button" (click)="showApiPw.set(!showApiPw())">
+              <mat-icon>{{ showApiPw() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+          </mat-form-field>
+        </div>
+
+        <div class="section-label">Anthropic API Key <span class="optional">(optional)</span></div>
+        <mat-form-field appearance="outline">
+          <mat-label>API Key</mat-label>
+          <input matInput [type]="showAnthropicKey() ? 'text' : 'password'" placeholder="sk-ant-..." [value]="anthropicKey()" (input)="anthropicKey.set($any($event.target).value)" autocomplete="off" />
+          <button mat-icon-button matSuffix type="button" (click)="showAnthropicKey.set(!showAnthropicKey())">
+            <mat-icon>{{ showAnthropicKey() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <div class="section-label">Openclaw Credentials <span class="optional">(optional)</span></div>
+        <div class="field-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Username</mat-label>
+            <input matInput [value]="openclawUsername()" (input)="openclawUsername.set($any($event.target).value)" autocomplete="off" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input matInput [type]="showOpenclawPw() ? 'text' : 'password'" [value]="openclawPassword()" (input)="openclawPassword.set($any($event.target).value)" autocomplete="new-password" />
+            <button mat-icon-button matSuffix type="button" (click)="showOpenclawPw.set(!showOpenclawPw())">
+              <mat-icon>{{ showOpenclawPw() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+          </mat-form-field>
+        </div>
+
+        <div class="section-label">MQTT Credentials <span class="optional">(optional)</span></div>
+        <div class="field-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Username</mat-label>
+            <input matInput [value]="mqttUsername()" (input)="mqttUsername.set($any($event.target).value)" autocomplete="off" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input matInput [type]="showMqttPw() ? 'text' : 'password'" [value]="mqttPassword()" (input)="mqttPassword.set($any($event.target).value)" autocomplete="new-password" />
+            <button mat-icon-button matSuffix type="button" (click)="showMqttPw.set(!showMqttPw())">
+              <mat-icon>{{ showMqttPw() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+          </mat-form-field>
+        </div>
+      </div>
+
+      @if (step2Error()) {
+        <p class="error-msg">{{ step2Error() }}</p>
+      }
+
+      <button mat-flat-button color="primary" class="cta-btn" (click)="saveSettings()" [disabled]="!step2Valid || step2Loading()">
+        @if (step2Loading()) { Saving… } @else { Finish Setup }
+        <mat-icon>check</mat-icon>
+      </button>
+    }
+
+    <!-- Step 3: Done -->
+    @if (step() === 3) {
+      <div class="done-state">
+        <div class="done-icon">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+        <h2>Setup Complete</h2>
+        <p>Your portal is ready. Log in with the admin account you just created.</p>
+        <button mat-flat-button color="primary" class="cta-btn" (click)="goToLogin()">
+          Go to Login <mat-icon>arrow_forward</mat-icon>
+        </button>
+      </div>
+    }
+  </div>
+</div>
