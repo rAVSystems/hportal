@@ -1,9 +1,28 @@
 .container {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: flex-start;
+  padding-top: 200px;
   width: 100%;
-  margin-top: 10vh;
+  height: calc(100vh - 74px);
+  overflow: hidden;
+  position: fixed;
+  top: 74px;
+  left: 0;
+}
+
+.login-copyright {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 6px 16px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(0, 21, 51, 0.7);
+  border-radius: 20px;
+  margin: 0;
 }
 
 .login-card {

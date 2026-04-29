@@ -26,6 +26,7 @@ export class LoginPage {
   username = '';
   password = '';
 
+  readonly year = new Date().getFullYear();
   isLoading = signal(false);
   errorMessage = signal<string>('');
   private errorTimer: any = null;

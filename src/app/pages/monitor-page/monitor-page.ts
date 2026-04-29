@@ -54,9 +54,6 @@ export class MonitorPage implements OnInit {
   rooms = signal<RoomDoc[]>([]);
   isLoading = signal(false);
   errorMessage = signal<string>('');
-  showIntro = signal(true);
-  introFading = signal(false);
-
   // New room modal
   showNewRoom = signal(false);
   newCampus = signal('');
@@ -236,10 +233,6 @@ export class MonitorPage implements OnInit {
 
   ngOnInit(): void {
     this.loadRooms();
-    setTimeout(() => {
-      this.introFading.set(true);
-      setTimeout(() => this.showIntro.set(false), 800);
-    }, 3000);
   }
 
   loadRooms(): void {

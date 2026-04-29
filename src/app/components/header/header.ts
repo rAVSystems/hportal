@@ -1,7 +1,9 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, NavigationEnd } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map, startWith } from 'rxjs/operators';
 import { AuthService } from '../../services/auth-service';
 import { NavigationGuardService } from '../../services/navigation-guard.service';
 
@@ -13,14 +15,23 @@ import { NavigationGuardService } from '../../services/navigation-guard.service'
   styleUrl: './header.scss',
 })
 export class Header {
+  auth = inject(AuthService);
+  private router = inject(Router);
+  private navGuard = inject(NavigationGuardService);
+
   showNavConfirm = signal(false);
   private pendingUrl: string | null = null;
 
-  constructor(
-    public auth: AuthService,
-    private router: Router,
-    private navGuard: NavigationGuardService
-  ) {}
+  isLoginPage = toSignal(
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      map(e => (e as NavigationEnd).urlAfterRedirects === '/login'),
+      startWith(this.router.url === '/login')
+    ),
+    { initialValue: this.router.url === '/login' }
+  );
+
+  constructor() {}
 
   navTo(url: string, event: Event): void {
     event.preventDefault();
