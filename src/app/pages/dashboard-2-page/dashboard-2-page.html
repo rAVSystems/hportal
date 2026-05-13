@@ -1,0 +1,223 @@
+@if (controlRoom()) {
+  <div class="gui-overlay" (click)="closeControlModal()">
+    <div class="gui-modal" (click)="$event.stopPropagation()">
+      <div class="gui-modal-title">Select To Control</div>
+      <button class="gui-btn" (click)="goToControl('inroom')">
+        <mat-icon>meeting_room</mat-icon>
+        <span>In-Room</span>
+      </button>
+      <button class="gui-btn" (click)="goToControl('advanced')">
+        <mat-icon>settings</mat-icon>
+        <span>Advanced</span>
+      </button>
+    </div>
+  </div>
+}
+
+@if (showNewRoom()) {
+  <div class="new-room-backdrop" (click)="closeNewRoom()">
+    <div class="new-room-modal" (click)="$event.stopPropagation()">
+      <div class="new-room-header">
+        <button mat-icon-button type="button" (click)="closeNewRoom()">
+          <mat-icon>close</mat-icon>
+        </button>
+        <h2 class="new-room-title">New Room</h2>
+      </div>
+      <div class="new-room-fields">
+        <div class="field-group">
+          <label>Campus</label>
+          <input type="text" placeholder="e.g. Main Campus" [value]="newCampus()" (input)="newCampus.set($any($event.target).value)" />
+        </div>
+        <div class="field-group">
+          <label>Building</label>
+          <input type="text" placeholder="e.g. Harvard Hall" [value]="newBuilding()" (input)="newBuilding.set($any($event.target).value)" />
+        </div>
+        <div class="field-group">
+          <label>Room</label>
+          <input type="text" placeholder="e.g. 101" [value]="newRoom()" (input)="newRoom.set($any($event.target).value)" />
+        </div>
+        <div class="field-group">
+          <label>IP Address</label>
+          <input type="text" placeholder="e.g. 192.168.1.100" [value]="newIp()" (input)="newIp.set($any($event.target).value)" />
+        </div>
+        <div class="field-group">
+          <label>Template <span class="optional">(optional)</span></label>
+          <select [value]="newTemplateId()" (change)="newTemplateId.set($any($event.target).value)">
+            <option value="">No template — blank room</option>
+            @for (t of templates(); track t._id) {
+              <option [value]="t._id">{{ t.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      @if (newRoomError()) {
+        <p class="new-room-error">{{ newRoomError() }}</p>
+      }
+      <div class="new-room-actions">
+        <button mat-stroked-button type="button" (click)="customizeRoom()" [disabled]="!newRoomFormValid || newRoomSaving()">
+          Customize
+        </button>
+        <button mat-flat-button color="primary" type="button" (click)="createRoom()" [disabled]="!newRoomFormValid || newRoomSaving()">
+          @if (newRoomSaving()) { Creating… } @else { Create Room }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<div class="view-toggle">
+  <button class="toggle-btn" [class.active]="viewMode() === 'table'" (click)="viewMode.set('table')" title="Table view">
+    <mat-icon>table_rows</mat-icon>
+  </button>
+  <button class="toggle-btn" [class.active]="viewMode() === 'cards'" (click)="viewMode.set('cards')" title="Card view">
+    <mat-icon>grid_view</mat-icon>
+  </button>
+</div>
+
+<div class="dashboard-2" [class.blurred]="showNewRoom()">
+  <div class="table-container">
+    <div class="table-header">
+      <h2>Dashboard</h2>
+      <div class="header-filters">
+        <mat-form-field appearance="outline" class="header-search">
+          <mat-label>Search</mat-label>
+          <input matInput type="text" placeholder="Building, room, campus…"
+            [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" />
+          @if (searchText()) {
+            <button mat-icon-button matSuffix aria-label="Clear" (click)="searchText.set('')">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="header-filter-field">
+          <mat-label>Campus</mat-label>
+          <mat-select [ngModel]="campusFilter()" (ngModelChange)="campusFilter.set($event)">
+            <mat-option value="">All</mat-option>
+            @for (c of campuses(); track c) { <mat-option [value]="c">{{ c }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="header-filter-field">
+          <mat-label>Building</mat-label>
+          <mat-select [ngModel]="buildingFilter()" (ngModelChange)="buildingFilter.set($event)">
+            <mat-option value="">All</mat-option>
+            @for (b of buildings(); track b) { <mat-option [value]="b">{{ b }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="header-filter-field">
+          <mat-label>Room Type</mat-label>
+          <mat-select [ngModel]="roomTypeFilter()" (ngModelChange)="roomTypeFilter.set($event)">
+            <mat-option value="">All</mat-option>
+            @for (t of roomTypes(); track t) { <mat-option [value]="t">{{ t }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <button mat-flat-button color="primary" (click)="openNewRoom()">
+        New Room <mat-icon>add</mat-icon>
+      </button>
+    </div>
+
+    @if (viewMode() === 'table') {
+    <table class="room-table">
+      <thead>
+        <tr>
+          <th (click)="sort('campus')" class="sortable">
+            Campus <mat-icon class="sort-icon">{{ sortIcon('campus') }}</mat-icon>
+          </th>
+          <th (click)="sort('building')" class="sortable">
+            Building <mat-icon class="sort-icon">{{ sortIcon('building') }}</mat-icon>
+          </th>
+          <th (click)="sort('room')" class="sortable">
+            Room <mat-icon class="sort-icon">{{ sortIcon('room') }}</mat-icon>
+          </th>
+          <th (click)="sort('online')" class="sortable th-status">
+            Online <mat-icon class="sort-icon">{{ sortIcon('online') }}</mat-icon>
+          </th>
+          <th (click)="sort('systemOn')" class="sortable th-indicator">
+            System <mat-icon class="sort-icon">{{ sortIcon('systemOn') }}</mat-icon>
+          </th>
+          <th (click)="sort('occupied')" class="sortable th-indicator">
+            Occupied <mat-icon class="sort-icon">{{ sortIcon('occupied') }}</mat-icon>
+          </th>
+          <th (click)="sort('temp')" class="sortable th-indicator">
+            Temp <mat-icon class="sort-icon">{{ sortIcon('temp') }}</mat-icon>
+          </th>
+          <th (click)="sort('lampHours')" class="sortable th-indicator">
+            Lamp Hrs <mat-icon class="sort-icon">{{ sortIcon('lampHours') }}</mat-icon>
+          </th>
+          <th (click)="sort('roomType')" class="sortable">
+            Type <mat-icon class="sort-icon">{{ sortIcon('roomType') }}</mat-icon>
+          </th>
+          <th class="th-actions"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of filteredSortedRooms(); track r._id) {
+          @let state = mqtt.roomStates()[r._id];
+          @let online = state != null;
+          <tr class="room-row">
+            <td class="td-campus">{{ r.config?.campus }}</td>
+            <td class="td-building">{{ r.config?.building }}</td>
+            <td class="td-room">{{ r.config?.room }}</td>
+            <td class="td-status">
+              <mat-icon class="online-label" [class.is-online]="online">{{ online ? 'wifi' : 'wifi_off' }}</mat-icon>
+            </td>
+            <td class="td-indicator">
+              <mat-icon [class.icon-on]="state?.systemOn" [class.icon-warn]="!state?.systemOn && online">
+                power_settings_new
+              </mat-icon>
+            </td>
+            <td class="td-indicator">
+              <mat-icon [class.icon-blue]="state?.occupied">{{ state?.occupied ? 'person' : 'person_off' }}</mat-icon>
+            </td>
+            <td class="td-indicator">
+              @if (state?.temp != null) {
+                <span class="temp-value" [class.temp-warn]="(state?.temp ?? 0) > 40">{{ state?.temp }}°C</span>
+              } @else {
+                <span class="td-empty">—</span>
+              }
+            </td>
+            <td class="td-indicator">
+              @if ((state?.lampHours ?? 0) > 0) {
+                <span class="lamp-value" [style.color]="lampColor(state?.lampHours ?? 0)">{{ state?.lampHours }}</span>
+              } @else {
+                <span class="td-empty">—</span>
+              }
+            </td>
+            <td class="td-type">
+              <span class="type-badge type-{{ (r.config?.roomType ?? '') | lowercase }}">{{ r.config?.roomType }}</span>
+            </td>
+            <td class="td-actions">
+              <div>
+                <button mat-stroked-button class="action-btn" (click)="goToRoom(r._id)">
+                  <mat-icon>edit</mat-icon> Edit
+                </button>
+                <button mat-stroked-button class="action-btn" (click)="openControlModal(r)">
+                  <mat-icon>settings_remote</mat-icon> Control
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+        @if (filteredSortedRooms().length === 0 && !isLoading()) {
+          <tr>
+            <td colspan="11" class="td-empty-state">No rooms found.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    @if (isLoading()) {
+      <div class="loading">Loading…</div>
+    }
+    } @else {
+      <div class="room-grid">
+        @for (room of filteredSortedRooms(); track room._id) {
+          <app-room-card class="room-card" [room]="room" />
+        }
+        @if (filteredSortedRooms().length === 0 && !isLoading()) {
+          <p class="no-rooms">No rooms found.</p>
+        }
+      </div>
+    }
+  </div>
+</div>

@@ -7,9 +7,6 @@
         <div class="room-card__title">{{ cfg().building }} {{ cfg().room }}</div>
         <div class="room-card__subtitle">{{ cfg().campus }}</div>
       </div>
-      <button class="touch-btn" (click)="$event.stopPropagation(); showGuiModal.set(true)">
-        <mat-icon>touch_app</mat-icon>
-      </button>
     </div>
 
     <!-- Content -->
@@ -59,7 +56,9 @@
 
       <div class="room-badge-row">
         <span class="room-type-badge" [ngClass]="cardTypeClasses()">{{ cfg().roomType }}</span>
-        <span class="version-badge">v{{ cfg().version }}</span>
+        <button class="touch-btn" (click)="$event.stopPropagation(); showGuiModal.set(true)">
+          <mat-icon>touch_app</mat-icon>
+        </button>
       </div>
     </div>
 

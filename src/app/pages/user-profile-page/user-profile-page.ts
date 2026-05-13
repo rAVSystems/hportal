@@ -18,12 +18,6 @@ interface ChannelConfig {
   tokenSet?: boolean;
 }
 
-const ALL_SKILLS: { id: string; label: string; description: string }[] = [
-  { id: 'monitor-device-status',   label: 'Monitor Device Status',              description: 'Detect problems and attempt resolution' },
-  { id: 'check-lamp-hours',        label: 'Check Lamp Hours',                   description: 'Detect problems and generate report' },
-  { id: 'monitor-energy',          label: 'Monitor Energy Efficiency',          description: 'Detect problems and generate report' },
-  { id: 'check-inputs',            label: 'Check Projector & Display Inputs',   description: 'Detect problems and attempt resolution' },
-];
 
 const ALL_CHANNELS: { value: string; label: string }[] = [
   { value: 'discord', label: 'Discord' },
@@ -91,10 +85,10 @@ export class UserProfilePage implements OnInit, OnDestroy {
   pairingRequests = signal<any[]>([]);
   approvingCode = signal<string | null>(null);
   enabledSkills = signal<Set<string>>(new Set());
+  allSkills = signal<{ id: string; label: string; description: string }[]>([]);
   skillsSaving = signal(false);
   skillsSuccess = signal<string | null>(null);
   skillsError = signal<string | null>(null);
-  readonly allSkills = ALL_SKILLS;
   openclawSaving = signal(false);
   openclawSuccess = signal<string | null>(null);
   openclawError = signal<string | null>(null);
@@ -150,10 +144,11 @@ private statusPollTimer: any = null;
     );
   }
 
+
+
   // ── API credentials ───────────────────────────────────────────────────────
   apiUsername = signal('');
   apiPassword = signal('');
-  apiPasswordConfirm = signal('');
   apiSaving = signal(false);
   apiSuccess = signal(false);
   apiError = signal<string | null>(null);
@@ -204,6 +199,7 @@ private statusPollTimer: any = null;
           this.fetchDashboardUrl();
           this.fetchModels();
           this.fetchPairingRequests();
+          this.fetchSkills();
         } else {
           this.openclawDashboardUrl.set(null);
           this.pairingRequests.set([]);
@@ -391,10 +387,12 @@ private statusPollTimer: any = null;
       next: (s) => {
         const mqttUser = s.mqttCredentials?.username;
         if (mqttUser && mqttUser !== 'not-configured') this.mqttUsername.set(mqttUser);
+        const apiUser = s.apiCredentials?.username;
+        if (apiUser && apiUser !== 'not-configured') this.apiUsername.set(apiUser);
         if (s.openclawLlmProvider) this.llmProvider.set(s.openclawLlmProvider);
         this.llmKeyIsSet.set(!!s.openclawLlmKeySet);
         if (s.openclawLlmKeySet) this.llmApiKey.set(this.MASKED_KEY);
-        if (Array.isArray(s.openclawSkills)) this.enabledSkills.set(new Set(s.openclawSkills));
+        // Skills are loaded live from openclaw in fetchSkills() once status is known
         if (Array.isArray(s.openclawChannels)) {
           this.channels.set(s.openclawChannels.map((c: any) => ({
             name: c.name,
@@ -551,6 +549,22 @@ private statusPollTimer: any = null;
     }
   }
 
+  private fetchSkills(): void {
+    this.http.get<{ skills: { name: string; description: string; eligible: boolean; enabled: boolean }[] }>(
+      `${this.apiBase}/openclaw/skills`, { headers: this.authHeaders() }
+    ).subscribe({
+      next: (res) => {
+        this.allSkills.set(res.skills.map(s => ({
+          id: s.name,
+          label: s.name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          description: s.description,
+        })));
+        this.enabledSkills.set(new Set(res.skills.filter(s => s.enabled).map(s => s.name)));
+      },
+      error: () => {},
+    });
+  }
+
   isSkillEnabled(id: string): boolean {
     return this.enabledSkills().has(id);
   }
@@ -569,7 +583,7 @@ private statusPollTimer: any = null;
     this.skillsError.set(null);
     this.skillsSuccess.set(null);
     const skills = Array.from(this.enabledSkills());
-    this.http.put(`${this.apiBase}/settings`, { openclawSkills: skills }, { headers: this.authHeaders() }).subscribe({
+    this.http.put(`${this.apiBase}/openclaw/skills`, { enabled: skills }, { headers: this.authHeaders() }).subscribe({
       next: () => {
         this.skillsSaving.set(false);
         this.skillsSuccess.set('Skills saved.');
@@ -585,22 +599,28 @@ private statusPollTimer: any = null;
   // ── API credentials ───────────────────────────────────────────────────────
 
   saveApiCredentials(): void {
-    if (this.apiSaving() || !this.apiPassword().trim()) return;
-    if (this.apiPassword() !== this.apiPasswordConfirm()) {
-      this.apiError.set('Passwords do not match.');
-      return;
-    }
+    if (this.apiSaving() || !this.apiUsername().trim() || !this.apiPassword().trim()) return;
     this.apiSaving.set(true);
     this.apiError.set(null);
     this.http.put(`${this.apiBase}/settings`, {
-      apiCredentials: { username: 'api', password: this.apiPassword() },
+      apiCredentials: { username: this.apiUsername().trim(), password: this.apiPassword() },
     }, { headers: this.authHeaders() }).subscribe({
       next: () => {
-        this.apiSaving.set(false);
-        this.apiPassword.set('');
-        this.apiPasswordConfirm.set('');
-        this.apiSuccess.set(true);
-        setTimeout(() => this.apiSuccess.set(false), 2000);
+        this.http.post(`${this.apiBase}/openclaw/configure-db-credentials`, {
+          username: this.apiUsername().trim(),
+          password: this.apiPassword(),
+        }, { headers: this.authHeaders() }).subscribe({
+          next: () => {
+            this.apiSaving.set(false);
+            this.apiPassword.set('');
+            this.apiSuccess.set(true);
+            setTimeout(() => this.apiSuccess.set(false), 3000);
+          },
+          error: (err) => {
+            this.apiSaving.set(false);
+            this.apiError.set(err?.error?.error || 'Saved but failed to update OpenClaw container.');
+          },
+        });
       },
       error: (err) => {
         this.apiSaving.set(false);

@@ -18,24 +18,39 @@ export interface RoomState {
 export class MqttService implements OnDestroy {
   private client: MqttClient | null = null;
 
-  /** Map of roomId → latest state from MQTT */
   readonly roomStates = signal<Record<string, RoomState>>({});
-
-  /** Connection status */
   readonly connected = signal(false);
 
   private readonly BROKER_URL = `ws://${window.location.hostname}:9001`;
+  private readonly API_BASE = (window as any).API_BASE_URL || `http://${window.location.hostname}:8080`;
   private readonly TOPIC = 'av/rooms/+/state';
 
   constructor() {
+    this.loadInitialState();
     this.connect();
+  }
+
+  private loadInitialState(): void {
+    fetch(`${this.API_BASE}/rooms/states`)
+      .then(r => r.json())
+      .then((docs: RoomState[]) => {
+        if (!Array.isArray(docs)) return;
+        const map: Record<string, RoomState> = {};
+        for (const doc of docs) {
+          const roomId = (doc as any)._id ?? doc.roomId;
+          if (roomId) map[roomId] = { ...doc, roomId };
+        }
+        // Merge with any MQTT updates already received
+        this.roomStates.update(current => ({ ...map, ...current }));
+      })
+      .catch(() => {});
   }
 
   private connect(): void {
     this.client = mqtt.connect(this.BROKER_URL, {
       reconnectPeriod: 5000,
       connectTimeout: 10000,
-      keepalive: 10,  // send ping every 10s — detects disconnect within ~10-15s
+      keepalive: 10,
       clientId: `av-portal-${Math.random().toString(16).slice(2, 10)}`,
     });
 
@@ -60,7 +75,6 @@ export class MqttService implements OnDestroy {
     });
   }
 
-  /** Get latest state for a specific room (undefined if not yet received) */
   getState(roomId: string): RoomState | undefined {
     return this.roomStates()[roomId];
   }

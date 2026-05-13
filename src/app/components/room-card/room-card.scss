@@ -1,3 +1,9 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .room-card-container {
   width: 100%;
   height: 100%;
@@ -23,7 +29,6 @@
   justify-content: space-between;
   padding: 14px 10px 10px 16px;
   box-sizing: border-box;
-  //border-bottom: 3px solid black;
 }
 
 .header-text {
@@ -194,9 +199,9 @@
 
 .touch-btn {
   flex-shrink: 0;
-  width: auto;
+  width: 32px;
   height: 32px;
-  padding: 0 12px;
+  padding: 0;
   border-radius: 8px;
   border: 2px solid #333;
   background: rgba(0,0,0,0.08);
@@ -207,9 +212,9 @@
   transition: background 0.15s;
 
   mat-icon {
-    font-size: 22px;
-    width: 22px;
-    height: 22px;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
     color: #222;
   }
 
@@ -223,7 +228,7 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 18px 6px;
   width: 100%;
-  padding: 8px 0 46px 0;
+  padding: 8px 0 36px 0;
 }
 
 .indicator {
@@ -251,26 +256,15 @@
   span {
     font-size: 13px;
     font-weight: 600;
-    color: #555;
+    color: #000;
     text-align: center;
     line-height: 1.2;
   }
 
-  &.active mat-icon {
-    color: #43a047;
-  }
-
-  &.occupied mat-icon {
-    color: #29b6f6;
-  }
-
-  &.recording mat-icon {
-    color: #e53935;
-  }
-
-  &.temp-warn mat-icon {
-    color: #fb8c00;
-  }
+  &.active mat-icon { color: #43a047; }
+  &.occupied mat-icon { color: #29b6f6; }
+  &.recording mat-icon { color: #e53935; }
+  &.temp-warn mat-icon { color: #fb8c00; }
 
   &.active svg circle.progress {
     stroke: #43a047;

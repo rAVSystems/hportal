@@ -341,6 +341,12 @@ tr:hover .edit-icon { opacity: 1; }
   gap: 20px 24px;
 }
 
+.skills-empty {
+  color: #888;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
 .skill-row {
   display: flex;
   align-items: flex-start;

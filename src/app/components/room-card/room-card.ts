@@ -75,7 +75,7 @@ export class RoomCard {
   readonly lampColor = computed(() => {
     const h = this.lampHours();
     if (h >= 15000) return '#e53935';
-    if (h >= 10000) return '#fdd835';
+    if (h >= 10000) return '#f9a825';
     return '#43a047';
   });
 
