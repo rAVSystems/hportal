@@ -4,17 +4,12 @@
       <p class="modal-confirm-message">Delete Template</p>
       <p class="modal-confirm-sub">To confirm, enter the template name below.</p>
       <div class="modal-confirm-fields">
-        <input
-          class="inline-input"
-          type="text"
+        <input class="inline-input" type="text"
           [placeholder]="pendingDeleteTemplate?.name ?? ''"
           [value]="deleteConfirmInput()"
-          (input)="deleteConfirmInput.set($any($event.target).value)"
-        />
+          (input)="deleteConfirmInput.set($any($event.target).value)" />
       </div>
-      @if (deleteError()) {
-        <p class="modal-confirm-error">{{ deleteError() }}</p>
-      }
+      @if (deleteError()) { <p class="modal-confirm-error">{{ deleteError() }}</p> }
       <div class="modal-confirm-actions">
         <button mat-stroked-button type="button" (click)="cancelDelete()">Cancel</button>
         <button mat-flat-button color="warn" type="button" (click)="confirmDelete()" [disabled]="deleting()">
@@ -27,275 +22,366 @@
 
 <div class="profile-page">
 
-  <!-- Profile -->
-  <div class="page-section">
-    <div class="section-header">
-      <button mat-icon-button (click)="goBack()"><mat-icon>arrow_back</mat-icon></button>
-      <h2 class="section-title">My Profile</h2>
-    </div>
-    <div class="profile-body">
+  <!-- Side nav -->
+  <div class="side-nav-bar">
+    <nav class="side-nav">
+      <a class="side-nav-link" (click)="scrollTo('section-profile')"><mat-icon>person</mat-icon> Profile</a>
+      <a class="side-nav-link" (click)="scrollTo('section-templates')"><mat-icon>description</mat-icon> Templates</a>
+      @if (auth.hasRole('admin')) {
+        <a class="side-nav-link" (click)="scrollTo('section-agent')"><mat-icon>smart_toy</mat-icon> rAV Agent</a>
+        <a class="side-nav-link" (click)="scrollTo('section-integrations')"><mat-icon>settings</mat-icon> Integrations</a>
+      }
+    </nav>
+  </div>
 
-      <!-- Username -->
-      <div class="profile-card">
-        <h3 class="card-title">Username</h3>
-        <div class="field-row">
-          <input class="inline-input" type="text" placeholder="New username" [value]="newUsername()" (input)="newUsername.set($any($event.target).value)" />
-          <button mat-flat-button color="primary" (click)="saveUsername()" [disabled]="savingUsername()">
-            @if (savingUsername()) { Saving… } @else { Save }
-          </button>
+  <!-- Main content -->
+  <div class="profile-content">
+
+    <div class="content-header">
+      <button mat-icon-button (click)="goBack()"><mat-icon>arrow_back</mat-icon></button>
+      <h2 class="content-title">Settings</h2>
+    </div>
+
+    <!-- Profile -->
+    <div class="form-section" id="section-profile">
+      <h3 class="section-title">Profile</h3>
+
+      <div class="settings-stack">
+        <div class="settings-row">
+          <label>Username</label>
+          <input class="settings-input" type="text" placeholder="New username"
+            [value]="newUsername()" (input)="newUsername.set($any($event.target).value)" />
+          <div class="settings-actions">
+            <button mat-flat-button color="primary" (click)="saveUsername()" [disabled]="savingUsername()">
+              @if (savingUsername()) { Saving… } @else { Save }
+            </button>
+            @if (usernameSuccess()) { <span style="color:#2e7d32;font-size:.85rem">Updated.</span> }
+          </div>
         </div>
         @if (usernameError()) { <p class="field-error">{{ usernameError() }}</p> }
-        @if (usernameSuccess()) { <p class="field-success">Username updated.</p> }
-      </div>
 
-      <!-- Password -->
-      <div class="profile-card">
-        <h3 class="card-title">Change Password</h3>
-        <div class="field-col">
-          <input class="inline-input" type="password" placeholder="New password" [value]="newPassword()" (input)="newPassword.set($any($event.target).value)" />
-          <input class="inline-input" type="password" placeholder="Confirm new password" [value]="confirmPassword()" (input)="confirmPassword.set($any($event.target).value)" />
-          <button mat-flat-button color="primary" (click)="savePassword()" [disabled]="savingPassword()">
-            @if (savingPassword()) { Saving… } @else { Save Password }
-          </button>
+        <div class="settings-row">
+          <label>New Password</label>
+          <input class="settings-input" type="password" placeholder="New password"
+            [value]="newPassword()" (input)="newPassword.set($any($event.target).value)" />
+        </div>
+        <div class="settings-row">
+          <label>Confirm</label>
+          <input class="settings-input" type="password" placeholder="Confirm new password"
+            [value]="confirmPassword()" (input)="confirmPassword.set($any($event.target).value)" />
+          <div class="settings-actions">
+            <button mat-flat-button color="primary" (click)="savePassword()" [disabled]="savingPassword()">
+              @if (savingPassword()) { Saving… } @else { Save Password }
+            </button>
+            @if (passwordSuccess()) { <span style="color:#2e7d32;font-size:.85rem">Updated.</span> }
+          </div>
         </div>
         @if (passwordError()) { <p class="field-error">{{ passwordError() }}</p> }
-        @if (passwordSuccess()) { <p class="field-success">Password updated.</p> }
       </div>
-
     </div>
-  </div>
 
-  <!-- My Templates -->
-  <div class="page-section templates-section">
-    <div class="section-header">
-      <h2 class="section-title">My Templates</h2>
-      <button mat-stroked-button (click)="loadTemplates()">
-        <mat-icon>refresh</mat-icon> Refresh
-      </button>
-    </div>
-    @if (templatesError()) {
-      <div class="error-banner">{{ templatesError() }}</div>
-    }
-    <div class="table-wrapper">
-      <table class="users-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Permission</th>
-            <th>Created</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (t of templates(); track t._id) {
+    <!-- My Templates -->
+    <div class="form-section" id="section-templates">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+        <h3 class="section-title" style="margin:0">My Templates</h3>
+        <button mat-stroked-button (click)="loadTemplates()"><mat-icon>refresh</mat-icon> Refresh</button>
+      </div>
+      @if (templatesError()) { <div class="error-banner">{{ templatesError() }}</div> }
+      <div class="table-wrapper">
+        <table class="users-table">
+          <thead>
             <tr>
-              <td class="username-cell">
-                @if (stateFor(t._id).editingName) {
-                  <div class="inline-edit-row">
-                    <input class="inline-input" type="text" [(ngModel)]="stateFor(t._id).pendingName" (keydown.enter)="saveName(t._id)" (keydown.escape)="cancelEditName(t._id)" [disabled]="stateFor(t._id).saving" autofocus />
-                    <button mat-icon-button class="icon-btn-sm" title="Save" (click)="saveName(t._id)" [disabled]="stateFor(t._id).saving"><mat-icon>check</mat-icon></button>
-                    <button mat-icon-button class="icon-btn-sm" title="Cancel" (click)="cancelEditName(t._id)" [disabled]="stateFor(t._id).saving"><mat-icon>close</mat-icon></button>
-                  </div>
-                } @else {
-                  <div class="username-display">
-                    <span>{{ t.name }}</span>
-                    <button mat-icon-button class="icon-btn-sm edit-icon" title="Rename" (click)="startEditName(t._id, t.name)"><mat-icon>edit</mat-icon></button>
-                  </div>
-                }
-              </td>
-              <td class="date-cell">{{ t.permission }}</td>
-              <td class="date-cell">{{ formatDate(t.created) }}</td>
-              <td class="actions-cell">
-                @if (t.createdby === auth.user()?.username) {
-                  <button mat-stroked-button class="edit-btn" (click)="editTemplate(t._id)"><mat-icon>edit</mat-icon> Edit</button>
-                }
-                <button mat-stroked-button class="delete-btn" (click)="promptDelete(t._id)" [disabled]="t.permission === 'admin'"><mat-icon>delete</mat-icon> Delete</button>
-              </td>
+              <th>Name</th>
+              <th>Permission</th>
+              <th>Created</th>
+              <th>Actions</th>
             </tr>
-          }
-          @if (templates().length === 0 && !templatesLoading()) {
-            <tr><td colspan="4" class="empty-row">No templates yet.</td></tr>
-          }
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Admin-only sections -->
-  @if (auth.hasRole('admin')) {
-
-    <!-- OpenClaw -->
-    <div class="page-section">
-      <div class="section-header">
-        <h2 class="section-title">OpenClaw</h2>
-        <div class="openclaw-status">
-          <span class="status-dot" [class.running]="openclawRunning() === true" [class.stopped]="openclawRunning() === false"></span>
-          <span class="status-label">{{ openclawRunning() === null ? 'Checking…' : openclawRunning() ? 'Running' : 'Stopped' }}</span>
-          @if (openclawRunning() === true && openclawDashboardUrl()) {
-            <a class="dashboard-link" [href]="openclawDashboardUrl()!" target="_blank" rel="noopener">Dashboard</a>
-          }
-        </div>
-        <div style="flex:1"></div>
-        @if (openclawRunning() === false) {
-          <button mat-stroked-button (click)="startOpenclaw()" [disabled]="openclawActionBusy()">
-            <mat-icon>play_arrow</mat-icon> Start
-          </button>
-        }
-        @if (openclawRunning() === true) {
-          <button mat-stroked-button color="warn" (click)="stopOpenclaw()" [disabled]="openclawActionBusy()">
-            <mat-icon>stop</mat-icon> Stop
-          </button>
-        }
+          </thead>
+          <tbody>
+            @for (t of templates(); track t._id) {
+              <tr>
+                <td class="username-cell">
+                  @if (stateFor(t._id).editingName) {
+                    <div class="inline-edit-row">
+                      <input class="inline-input" type="text" [(ngModel)]="stateFor(t._id).pendingName"
+                        (keydown.enter)="saveName(t._id)" (keydown.escape)="cancelEditName(t._id)"
+                        [disabled]="stateFor(t._id).saving" autofocus />
+                      <button mat-icon-button class="icon-btn-sm" title="Save" (click)="saveName(t._id)" [disabled]="stateFor(t._id).saving"><mat-icon>check</mat-icon></button>
+                      <button mat-icon-button class="icon-btn-sm" title="Cancel" (click)="cancelEditName(t._id)" [disabled]="stateFor(t._id).saving"><mat-icon>close</mat-icon></button>
+                    </div>
+                  } @else {
+                    <div class="username-display">
+                      <span>{{ t.name }}</span>
+                      <button mat-icon-button class="icon-btn-sm edit-icon" title="Rename" (click)="startEditName(t._id, t.name)"><mat-icon>edit</mat-icon></button>
+                    </div>
+                  }
+                </td>
+                <td class="date-cell">{{ t.permission }}</td>
+                <td class="date-cell">{{ formatDate(t.created) }}</td>
+                <td class="actions-cell">
+                  @if (t.createdby === auth.user()?.username) {
+                    <button mat-stroked-button class="edit-btn" (click)="editTemplate(t._id)"><mat-icon>edit</mat-icon> Edit</button>
+                  }
+                  <button mat-stroked-button class="delete-btn" (click)="promptDelete(t._id)" [disabled]="t.permission === 'admin'"><mat-icon>delete</mat-icon> Delete</button>
+                </td>
+              </tr>
+            }
+            @if (templates().length === 0 && !templatesLoading()) {
+              <tr><td colspan="4" class="empty-row">No templates yet.</td></tr>
+            }
+          </tbody>
+        </table>
       </div>
-      <div class="profile-body">
+    </div>
 
-        <div class="profile-card">
-          <h3 class="card-title">Language Model</h3>
-          <div class="field-col">
-            <select class="inline-input" (change)="onProviderChange($any($event.target).value)">
-              <option value="">Select provider…</option>
-              @for (opt of llmOptions; track opt.value) {
-                <option [value]="opt.value" [selected]="opt.value === llmProvider()">{{ opt.label }}</option>
-              }
-            </select>
-            @if (llmProvider()) {
-              <select class="inline-input" (change)="llmModel.set($any($event.target).value)">
-                <option value="">Select model…</option>
-                @for (m of filteredModels(); track m) {
-                  <option [value]="m" [selected]="m === llmModel()">{{ m }}</option>
-                }
-              </select>
-              <input class="inline-input" type="password"
-                placeholder="API Key"
-                [value]="llmApiKey()"
-                (focus)="llmApiKey() === MASKED_KEY && llmApiKey.set('')"
-                (blur)="!llmApiKey() && llmKeyIsSet() && llmApiKey.set(MASKED_KEY)"
-                (input)="llmApiKey.set($any($event.target).value)" />
+    <!-- Admin sections -->
+    @if (auth.hasRole('admin')) {
+
+      <!-- rAV Agent -->
+      <div class="form-section" id="section-agent">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+          <h3 class="section-title" style="margin:0">rAV Agent</h3>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="agent-status">
+              <span class="status-dot" [class.running]="openclawRunning() === true" [class.stopped]="openclawRunning() === false"></span>
+              <span class="status-label">{{ openclawRunning() === null ? 'Checking…' : openclawRunning() ? 'Running' : 'Stopped' }}</span>
+            </div>
+            @if (openclawRunning() === false) {
+              <button mat-stroked-button (click)="startOpenclaw()" [disabled]="openclawActionBusy()">
+                <mat-icon>play_arrow</mat-icon> Start
+              </button>
+            }
+            @if (openclawRunning() === true) {
+              <button mat-stroked-button color="warn" (click)="stopOpenclaw()" [disabled]="openclawActionBusy()">
+                <mat-icon>stop</mat-icon> Stop
+              </button>
             }
           </div>
-          <div class="card-footer">
-            <button mat-flat-button color="primary" (click)="saveOpenClaw()" [disabled]="openclawSaving()">
-              @if (openclawSaving()) { Saving… } @else { Save Settings }
-            </button>
-            @if (openclawError()) { <p class="field-error">{{ openclawError() }}</p> }
-            @if (openclawSuccess()) { <p class="field-success">{{ openclawSuccess() }}</p> }
-          </div>
         </div>
 
-        <div class="profile-card">
-          <h3 class="card-title">Channels</h3>
-          <div class="channels-grid">
-            @for (ch of allChannels; track ch.value) {
-              <label class="checkbox-row">
-                <input type="checkbox" [checked]="isChannelEnabled(ch.value)" (change)="toggleChannel(ch.value)" />
-                {{ ch.label }}
-              </label>
-              <div class="pairing-key-cell">
-                @if (isChannelEnabled(ch.value)) {
-                  <input class="inline-input" type="password"
-                    [placeholder]="tokenSetFor(ch.value) ? '•••••••••••••••• (token saved)' : ch.label + ' Bot Token'"
-                    [value]="tokenFor(ch.value)"
-                    (focus)="tokenFor(ch.value) === '••••••••••••••••' && setChannelToken(ch.value, '')"
-                    (blur)="!tokenFor(ch.value) && tokenSetFor(ch.value) && setChannelToken(ch.value, '••••••••••••••••')"
-                    (input)="setChannelToken(ch.value, $any($event.target).value)" />
+        <!-- Language Model + Channels side by side -->
+        <div class="agent-two-col">
+
+          <div class="agent-col">
+            <h4 class="agent-col-title">Language Model</h4>
+            <div class="settings-stack">
+              <div class="settings-row">
+                <label>Base URL</label>
+                <input class="settings-input" type="text"
+                  placeholder="https://api.openai.com/v1"
+                  [value]="openaiBaseUrl()"
+                  (input)="openaiBaseUrl.set($any($event.target).value)" />
+              </div>
+              <div class="settings-row">
+                <label>Token @if (openaiKeySet()) { <span class="key-set-badge">Saved</span> }</label>
+                <input class="settings-input" type="password"
+                  [placeholder]="openaiKeySet() ? '•••••••••••••• (saved)' : 'API token'"
+                  [value]="openaiKey()"
+                  (focus)="openaiKey() === MASKED_KEY && openaiKey.set('')"
+                  (blur)="!openaiKey() && openaiKeySet() && openaiKey.set(MASKED_KEY)"
+                  (input)="openaiKey.set($any($event.target).value)" />
+              </div>
+              <div class="settings-row">
+                <label>Model</label>
+                <select class="settings-input" [ngModel]="pendingActiveModel()" (ngModelChange)="setActiveModel($event)">
+                  <option value="">Select model…</option>
+                  @for (m of LLM_MODELS; track m.value) {
+                    <option [value]="m.value">{{ m.label }}</option>
+                  }
+                </select>
+              </div>
+              <div class="settings-row">
+                <label></label>
+                <div class="settings-actions">
+                  <button mat-flat-button color="primary" (click)="saveLlmSettings()"
+                    [disabled]="llmKeySaving() || activeModelSaving()">
+                    @if (llmKeySaving() || activeModelSaving()) { Saving… } @else { Save }
+                  </button>
+                  @if (llmKeySaveError()) { <span style="color:#d32f2f;font-size:.85rem">{{ llmKeySaveError() }}</span> }
+                  @if (llmError() === 'active') { <span style="color:#d32f2f;font-size:.85rem">{{ llmErrorMsg() }}</span> }
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="agent-col-divider"></div>
+
+          <div class="agent-col">
+            <h4 class="agent-col-title">Channels</h4>
+            <div class="channels-list">
+              @for (ch of allChannels; track ch.value) {
+                <div class="channel-row">
+                  <label class="checkbox-row">
+                    <input type="checkbox" [checked]="isChannelEnabled(ch.value)" (change)="toggleChannel(ch.value)" />
+                    {{ ch.label }}
+                  </label>
+                  @if (isChannelEnabled(ch.value)) {
+                    <input class="settings-input channel-token-input" type="password"
+                      [placeholder]="tokenSetFor(ch.value) ? '•••••••••••••••• (saved)' : ch.label + ' Bot Token'"
+                      [value]="tokenFor(ch.value)"
+                      (focus)="tokenFor(ch.value) === '••••••••••••••••' && setChannelToken(ch.value, '')"
+                      (blur)="!tokenFor(ch.value) && tokenSetFor(ch.value) && setChannelToken(ch.value, '••••••••••••••••')"
+                      (input)="setChannelToken(ch.value, $any($event.target).value)" />
+                  }
+                </div>
+              }
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+              <button mat-flat-button color="primary" (click)="saveChannels()" [disabled]="channelsSaving()">
+                @if (channelsSaving()) { Saving… } @else { Save }
+              </button>
+              @if (channelsError()) { <span style="color:#d32f2f;font-size:.85rem">{{ channelsError() }}</span> }
+              @if (channelsSuccess()) { <span style="color:#2e7d32;font-size:.85rem">{{ channelsSuccess() }}</span> }
+            </div>
+            @if (pairingRequests().length > 0) {
+              <div class="pairing-requests">
+                <p class="pairing-title">Pending Pairing Requests</p>
+                @for (req of pairingRequests(); track req.code) {
+                  <div class="pairing-row">
+                    <span class="pairing-user">{{ req.meta?.name || req.id }}</span>
+                    <span class="pairing-code">{{ req.code }}</span>
+                    <button mat-stroked-button color="primary" (click)="approvePairing(req.code, req.channel || 'discord', req.id)" [disabled]="approvingCode() === req.code">
+                      @if (approvingCode() === req.code) { Approving… } @else { Approve }
+                    </button>
+                  </div>
                 }
               </div>
             }
           </div>
-          <div class="card-footer">
-            <button mat-flat-button color="primary" (click)="saveChannels()" [disabled]="channelsSaving()">
-              @if (channelsSaving()) { Saving… } @else { Save Settings }
-            </button>
-            @if (channelsError()) { <p class="field-error">{{ channelsError() }}</p> }
-            @if (channelsSuccess()) { <p class="field-success">{{ channelsSuccess() }}</p> }
-          </div>
-          @if (pairingRequests().length > 0) {
-            <div class="pairing-requests">
-              <h4 class="pairing-title">Pending Pairing Requests</h4>
-              @for (req of pairingRequests(); track req.code) {
-                <div class="pairing-row">
-                  <span class="pairing-user">{{ req.meta?.name || req.id }}</span>
-                  <span class="pairing-code">{{ req.code }}</span>
-                  <button mat-stroked-button color="primary" (click)="approvePairing(req.code, req.channel || 'discord')" [disabled]="approvingCode() === req.code">
-                    @if (approvingCode() === req.code) { Approving… } @else { Approve }
-                  </button>
-                </div>
-              }
+
+        </div>
+
+        <!-- Skills -->
+        <div style="margin-top:28px">
+          <h4 style="margin:0 0 8px;font-size:.85rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#888">Skills</h4>
+          @if (openclawRunning() !== true) {
+            <p class="skills-empty">rAV Agent must be running to manage skills.</p>
+          } @else {
+
+            <div class="skill-section-header" (click)="toggleSection('custom')">
+              <span>Workspace Skills</span>
+              <mat-icon>{{ sectionsCollapsed().custom ? 'expand_more' : 'expand_less' }}</mat-icon>
+            </div>
+            @if (!sectionsCollapsed().custom) {
+              <div class="skills-grid">
+                @if (workspaceSkills().length === 0) {
+                  <p class="skills-empty">No workspace skills found.</p>
+                }
+                @for (skill of workspaceSkills(); track skill.id) {
+                  <label class="skill-row">
+                    <input type="checkbox" [checked]="isSkillEnabled(skill.id)" (change)="toggleSkill(skill.id)" />
+                    <div class="skill-text">
+                      <span class="skill-label">{{ skill.label }}</span>
+                      @if (skill.description) { <span class="skill-desc">{{ skill.description }}</span> }
+                    </div>
+                  </label>
+                }
+              </div>
+            }
+
+            <div class="skill-section-header" (click)="toggleSection('scheduled')">
+              <span>Scheduled Jobs</span>
+              <mat-icon>{{ sectionsCollapsed().scheduled ? 'expand_more' : 'expand_less' }}</mat-icon>
+            </div>
+            @if (!sectionsCollapsed().scheduled) {
+              <div class="skills-grid">
+                @if (scheduledSkills().length === 0) {
+                  <p class="skills-empty">No scheduled jobs configured.</p>
+                }
+                @for (skill of scheduledSkills(); track skill.id) {
+                  <label class="skill-row">
+                    <input type="checkbox" [checked]="isSkillEnabled(skill.id)" (change)="toggleSkill(skill.id)" />
+                    <div class="skill-text">
+                      <span class="skill-label">{{ skill.label }}</span>
+                      @if (skill.description) { <span class="skill-desc">{{ skill.description }}</span> }
+                    </div>
+                  </label>
+                }
+              </div>
+            }
+
+            <div style="margin-top:12px;display:flex;align-items:center;gap:12px">
+              <button mat-flat-button color="primary" (click)="saveSkills()" [disabled]="skillsSaving()">
+                @if (skillsSaving()) { Saving… } @else { Save Skills }
+              </button>
+              @if (skillsError()) { <span style="color:#d32f2f;font-size:.85rem">{{ skillsError() }}</span> }
+              @if (skillsSuccess()) { <span style="color:#2e7d32;font-size:.85rem">{{ skillsSuccess() }}</span> }
             </div>
           }
         </div>
+      </div>
 
-      </div>
-      <div class="profile-body skills-body">
-        <div class="profile-card full-width">
-          <h3 class="card-title">Skills</h3>
-          <div class="skills-grid">
-            @if (openclawRunning() !== true) {
-              <p class="skills-empty">OpenClaw must be running to manage skills.</p>
-            } @else if (allSkills().length === 0) {
-              <p class="skills-empty">No workspace skills found.</p>
-            } @else {
-              @for (skill of allSkills(); track skill.id) {
-                <label class="skill-row">
-                  <input type="checkbox" [checked]="isSkillEnabled(skill.id)" (change)="toggleSkill(skill.id)" />
-                  <div class="skill-text">
-                    <span class="skill-label">{{ skill.label }}</span>
-                    <span class="skill-desc">{{ skill.description }}</span>
-                  </div>
-                </label>
-              }
-            }
-          </div>
-          <div class="card-footer">
-            <button mat-flat-button color="primary" (click)="saveSkills()" [disabled]="skillsSaving()">
-              @if (skillsSaving()) { Saving… } @else { Save Settings }
-            </button>
-            @if (skillsError()) { <p class="field-error">{{ skillsError() }}</p> }
-            @if (skillsSuccess()) { <p class="field-success">{{ skillsSuccess() }}</p> }
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- API + MQTT side by side -->
-    <div class="page-section">
-      <div class="section-header">
-        <h2 class="section-title">Integrations</h2>
-      </div>
-      <div class="profile-body">
+      <!-- Integrations -->
+      <div class="form-section" id="section-integrations">
+        <h3 class="section-title">Integrations</h3>
 
-        <div class="profile-card">
-          <h3 class="card-title">API Credentials</h3>
-          <div class="field-col">
-            <input class="inline-input" type="text" placeholder="Username" [value]="apiUsername()" (input)="apiUsername.set($any($event.target).value)" autocomplete="off" />
-            <input class="inline-input" type="password" placeholder="Password" [value]="apiPassword()" (input)="apiPassword.set($any($event.target).value)" autocomplete="new-password" />
+        <h4 style="margin:0 0 12px;font-size:.85rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#888">API Credentials</h4>
+        <div class="settings-stack">
+          <div class="settings-row">
+            <label>Username</label>
+            <input class="settings-input" type="text" placeholder="Username"
+              [value]="apiUsername()" (input)="apiUsername.set($any($event.target).value)" autocomplete="off" />
           </div>
-          <div class="card-footer">
-            <button mat-flat-button color="primary" (click)="saveApiCredentials()" [disabled]="apiSaving() || !apiUsername().trim() || !apiPassword().trim()">
-              @if (apiSaving()) { Saving… } @else { Save Settings }
-            </button>
-            @if (apiError()) { <p class="field-error">{{ apiError() }}</p> }
-            @if (apiSuccess()) { <p class="field-success">Saved. OpenClaw container restarted.</p> }
+          <div class="settings-row">
+            <label>Password</label>
+            <input class="settings-input" type="password" placeholder="Password"
+              [value]="apiPassword()" (input)="apiPassword.set($any($event.target).value)" autocomplete="new-password" />
+            <div class="settings-actions">
+              <button mat-flat-button color="primary" (click)="saveApiCredentials()"
+                [disabled]="apiSaving() || !apiUsername().trim() || !apiPassword().trim()">
+                @if (apiSaving()) { Saving… } @else { Save }
+              </button>
+              @if (apiSuccess()) { <span style="color:#2e7d32;font-size:.85rem">Saved.</span> }
+            </div>
           </div>
+          @if (apiError()) { <p class="field-error">{{ apiError() }}</p> }
         </div>
 
-        <div class="profile-card">
-          <h3 class="card-title">MQTT Broker</h3>
-          <div class="field-col">
-            <input class="inline-input" type="text" placeholder="Username" [value]="mqttUsername()" (input)="mqttUsername.set($any($event.target).value)" autocomplete="off" />
-            <input class="inline-input" type="password" placeholder="Password" [value]="mqttPassword()" (input)="mqttPassword.set($any($event.target).value)" autocomplete="new-password" />
-          </div>
-          <div class="card-footer">
-            <button mat-flat-button color="primary" (click)="saveMqttCredentials()" [disabled]="mqttSaving() || !mqttUsername().trim()">
-              @if (mqttSaving()) { Saving… } @else { Save Settings }
-            </button>
+        <div style="margin-top:28px">
+          <h4 style="margin:0 0 12px;font-size:.85rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#888">MQTT Broker</h4>
+          <div class="settings-stack">
+            <div class="settings-row">
+              <label>Username</label>
+              <input class="settings-input" type="text" placeholder="Username"
+                [value]="mqttUsername()" (input)="mqttUsername.set($any($event.target).value)" autocomplete="off" />
+            </div>
+            <div class="settings-row">
+              <label>Password</label>
+              <input class="settings-input" type="password" placeholder="Password"
+                [value]="mqttPassword()" (input)="mqttPassword.set($any($event.target).value)" autocomplete="new-password" />
+              <div class="settings-actions">
+                <button mat-flat-button color="primary" (click)="saveMqttCredentials()"
+                  [disabled]="mqttSaving() || !mqttUsername().trim()">
+                  @if (mqttSaving()) { Saving… } @else { Save }
+                </button>
+                @if (mqttSuccess()) { <span style="color:#2e7d32;font-size:.85rem">Saved.</span> }
+              </div>
+            </div>
             @if (mqttError()) { <p class="field-error">{{ mqttError() }}</p> }
-            @if (mqttSuccess()) { <p class="field-success">Saved.</p> }
           </div>
         </div>
 
+        <div style="margin-top:28px">
+          <h4 style="margin:0 0 12px;font-size:.85rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#888">Database</h4>
+          <div class="settings-stack">
+            <div class="settings-row">
+              <label>MongoDB Password</label>
+              <input class="settings-input" type="password" placeholder="New root password"
+                [value]="mongoPassword()" (input)="mongoPassword.set($any($event.target).value)" autocomplete="new-password" />
+              <div class="settings-actions">
+                <button mat-flat-button color="primary" (click)="resetMongoPassword()"
+                  [disabled]="mongoSaving() || !mongoPassword().trim()">
+                  @if (mongoSaving()) { Saving… } @else { Reset }
+                </button>
+                @if (mongoSuccess()) { <span style="color:#2e7d32;font-size:.85rem">Updated.</span> }
+              </div>
+            </div>
+            @if (mongoError()) { <p class="field-error">{{ mongoError() }}</p> }
+          </div>
+        </div>
       </div>
-    </div>
 
-  }
+    }
 
+  </div>
 </div>

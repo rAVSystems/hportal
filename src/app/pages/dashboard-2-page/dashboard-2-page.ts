@@ -13,6 +13,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { AuthService } from '../../services/auth-service';
 import { MqttService } from '../../services/mqtt.service';
 import { RoomCard } from '../../components/room-card/room-card';
+import { environment } from '../../../environments/environment';
 
 interface TemplateDoc {
   _id: string;
@@ -53,7 +54,7 @@ type SortDir = 'asc' | 'desc';
   styleUrl: './dashboard-2-page.scss',
 })
 export class Dashboard2Page implements OnInit {
-  private readonly apiBase = 'http://localhost:8080';
+  private readonly apiBase = environment.apiUrl;
 
   rooms = signal<RoomDoc[]>([]);
   isLoading = signal(false);

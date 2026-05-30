@@ -1,14 +1,11 @@
 <div class="user-management-page">
-  <div class="page-section">
-    <div class="section-header">
-      <button mat-icon-button (click)="goBack()"><mat-icon>arrow_back</mat-icon></button>
-      <h2 class="section-title">User Management</h2>
-      <button mat-stroked-button (click)="loadUsers()">
-        <mat-icon>refresh</mat-icon>
-        Refresh
-      </button>
-    </div>
+  <div class="content-header">
+    <button mat-icon-button (click)="goBack()"><mat-icon>arrow_back</mat-icon></button>
+    <h2 class="content-title">User Management</h2>
+    <button mat-stroked-button (click)="loadUsers()"><mat-icon>refresh</mat-icon> Refresh</button>
+  </div>
 
+  <div class="page-section">
     @if (error()) {
       <div class="error-banner">{{ error() }}</div>
     }
@@ -146,6 +143,15 @@
                   >
                     <mat-icon>lock_reset</mat-icon>
                     Reset Password
+                  </button>
+                  <button
+                    mat-stroked-button
+                    class="delete-btn"
+                    title="Delete user"
+                    (click)="deleteUser(user._id)"
+                  >
+                    <mat-icon>delete</mat-icon>
+                    Remove
                   </button>
                 }
               </td>

@@ -9,8 +9,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { AuthService, AuthResponse } from '../../services/auth-service';
+import { environment } from '../../../environments/environment';
 
-type LlmProvider = 'chatgpt' | 'gemini' | 'claude' | '';
 
 interface ChannelConfig {
   name: string;
@@ -49,7 +49,7 @@ interface TemplateEditState {
   styleUrl: './user-profile-page.scss',
 })
 export class UserProfilePage implements OnInit, OnDestroy {
-  private readonly apiBase: string = (window as any).API_BASE_URL || 'http://localhost:8080';
+  private readonly apiBase = environment.apiUrl;
 
   // ── Username ──────────────────────────────────────────────────────────────
   newUsername = signal('');
@@ -71,49 +71,137 @@ export class UserProfilePage implements OnInit, OnDestroy {
   editState = new Map<string, TemplateEditState>();
   private stateVersion = signal(0);
 
-  // ── OpenClaw ──────────────────────────────────────────────────────────────
-  llmProvider = signal<LlmProvider>('');
-  llmModel = signal('');
-  llmApiKey = signal('');
-  llmKeyIsSet = signal(false);
+  // ── rAV Agent ─────────────────────────────────────────────────────────────
   readonly MASKED_KEY = '••••••••••••••••';
-  allModels = signal<string[]>([]);
+
+  readonly LLM_MODELS = [
+    { value: 'openai/gpt-4o', label: 'GPT-4o' },
+    { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini' },
+    { value: 'openai/gpt-4.1', label: 'GPT-4.1' },
+    { value: 'openai/gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+  ];
+
+  openaiKey = signal('');
+  openaiKeySet = signal(false);
+  openaiBaseUrl = signal('');
+  llmKeySaving = signal(false);
+  llmKeySavingProvider = signal<string | null>(null);
+  llmKeySaveError = signal<string | null>(null);
+
+  llmError = signal<string | null>(null);
+  llmErrorMsg = signal<string | null>(null);
+  pendingActiveModel = signal('');
+  activeModelSaving = signal(false);
+
+  // kept for channels/skills/status
+  openclawSaving = signal(false);
+  openclawSuccess = signal<string | null>(null);
+  openclawError = signal<string | null>(null);
+  openclawRunning = signal<boolean | null>(null);
+  openclawActionBusy = signal(false);
+
   channels = signal<ChannelConfig[]>([]);
   channelsSaving = signal(false);
   channelsSuccess = signal<string | null>(null);
   channelsError = signal<string | null>(null);
   pairingRequests = signal<any[]>([]);
+  approvedUsers = signal<{ channel: string; id: string; name: string }[]>([]);
   approvingCode = signal<string | null>(null);
+  revokingUser = signal<string | null>(null);
   enabledSkills = signal<Set<string>>(new Set());
-  allSkills = signal<{ id: string; label: string; description: string }[]>([]);
+  allSkills = signal<{ id: string; label: string; description: string; kind: 'skill' | 'scheduled'; builtin?: boolean }[]>([]);
   skillsSaving = signal(false);
   skillsSuccess = signal<string | null>(null);
   skillsError = signal<string | null>(null);
-  openclawSaving = signal(false);
-  openclawSuccess = signal<string | null>(null);
-  openclawError = signal<string | null>(null);
-  openclawRunning = signal<boolean | null>(null); // null = unknown
-  openclawActionBusy = signal(false);
-  openclawDashboardUrl = signal<string | null>(null);
-private statusPollTimer: any = null;
 
-  readonly llmOptions: { value: LlmProvider; label: string }[] = [
-    { value: 'claude', label: 'Claude (Anthropic)' },
-    { value: 'chatgpt', label: 'ChatGPT (OpenAI)' },
-    { value: 'gemini', label: 'Gemini (Google)' },
-  ];
+  sectionsCollapsed = signal<{ custom: boolean; scheduled: boolean; builtin: boolean }>({ custom: false, scheduled: false, builtin: true });
 
-  readonly providerPrefix: Record<string, string> = {
-    claude: 'anthropic/',
-    chatgpt: 'openai/',
-    gemini: 'google/',
-  };
+  workspaceSkills = computed(() => this.allSkills().filter(s => s.kind === 'skill'));
+  scheduledSkills = computed(() => this.allSkills().filter(s => s.kind === 'scheduled'));
 
-  filteredModels = computed(() => {
-    const prefix = this.providerPrefix[this.llmProvider()];
-    if (!prefix) return [];
-    return this.allModels().filter(m => m.startsWith(prefix));
-  });
+  toggleSection(section: 'custom' | 'scheduled' | 'builtin') {
+    this.sectionsCollapsed.update(s => ({ ...s, [section]: !s[section] }));
+  }
+
+  pendingFallbackModel = signal('');
+  fallbackModelSaving = signal(false);
+
+  setActiveModel(value: string): void {
+    this.pendingActiveModel.set(value);
+  }
+
+  setFallbackModel(value: string): void {
+    this.pendingFallbackModel.set(value);
+  }
+
+  saveLlmKey(provider: string): void {
+    const key = this.openaiKey();
+    if (!key || key === this.MASKED_KEY) return;
+    this.llmKeySaving.set(true);
+    this.llmKeySavingProvider.set(provider);
+    this.llmKeySaveError.set(null);
+    this.http.post(`${this.apiBase}/openclaw/configure-llm`, {
+      llmProvider: provider, apiKey: key, baseUrl: this.openaiBaseUrl() || null,
+    }, { headers: this.authHeaders() }).subscribe({
+      next: () => {
+        this.llmKeySaving.set(false);
+        this.llmKeySavingProvider.set(null);
+        this.openaiKey.set(this.MASKED_KEY);
+        this.openaiKeySet.set(true);
+      },
+      error: (err) => {
+        this.llmKeySaving.set(false);
+        this.llmKeySavingProvider.set(null);
+        this.llmKeySaveError.set(err?.error?.error || 'Failed to save.');
+      },
+    });
+  }
+
+  saveLlmSettings(): void {
+    const key = this.openaiKey();
+    const model = this.pendingActiveModel();
+    const hasNewKey = !!(key && key !== this.MASKED_KEY);
+    this.llmKeySaving.set(true);
+    this.llmKeySavingProvider.set('openai');
+    this.llmKeySaveError.set(null);
+    this.llmError.set(null);
+    this.http.post(`${this.apiBase}/openclaw/configure-llm`, {
+      llmProvider: 'openai',
+      apiKey: hasNewKey ? key : undefined,
+      baseUrl: this.openaiBaseUrl() || null,
+      model: model || undefined,
+    }, { headers: this.authHeaders() }).subscribe({
+      next: () => {
+        this.llmKeySaving.set(false);
+        this.llmKeySavingProvider.set(null);
+        if (hasNewKey) { this.openaiKey.set(this.MASKED_KEY); this.openaiKeySet.set(true); }
+      },
+      error: (err) => {
+        this.llmKeySaving.set(false);
+        this.llmKeySavingProvider.set(null);
+        this.llmKeySaveError.set(err?.error?.error || 'Failed to save.');
+      },
+    });
+  }
+
+  saveActiveModel(): void {
+    const model = this.pendingActiveModel();
+    if (!model) return;
+    this.activeModelSaving.set(true);
+    this.llmError.set(null);
+    this.http.post(`${this.apiBase}/openclaw/configure-llm`, {
+      llmProvider: 'openai', model,
+    }, { headers: this.authHeaders() }).subscribe({
+      next: () => {
+        this.activeModelSaving.set(false);
+      },
+      error: (err) => {
+        this.activeModelSaving.set(false);
+        this.llmError.set('active');
+        this.llmErrorMsg.set(err?.error?.error || 'Failed to apply model.');
+      },
+    });
+  }
 
   readonly allChannels = ALL_CHANNELS;
 
@@ -160,6 +248,11 @@ private statusPollTimer: any = null;
   mqttSuccess = signal(false);
   mqttError = signal<string | null>(null);
 
+  mongoPassword = signal('');
+  mongoSaving = signal(false);
+  mongoSuccess = signal(false);
+  mongoError = signal<string | null>(null);
+
   // ── Delete confirmation ───────────────────────────────────────────────────
   pendingDeleteId = signal<string | null>(null);
   deleteConfirmInput = signal('');
@@ -183,25 +276,20 @@ private statusPollTimer: any = null;
     if (this.auth.hasRole('admin')) {
       this.loadSettings();
       this.pollOpenclawStatus();
-      this.statusPollTimer = setInterval(() => this.pollOpenclawStatus(), 10000);
     }
   }
 
-  ngOnDestroy(): void {
-    if (this.statusPollTimer) clearInterval(this.statusPollTimer);
-  }
+  ngOnDestroy(): void {}
 
   private pollOpenclawStatus(): void {
     this.http.get<{ running: boolean }>(`${this.apiBase}/openclaw/status`, { headers: this.authHeaders() }).subscribe({
       next: (res) => {
         this.openclawRunning.set(res.running);
         if (res.running) {
-          this.fetchDashboardUrl();
           this.fetchModels();
           this.fetchPairingRequests();
           this.fetchSkills();
         } else {
-          this.openclawDashboardUrl.set(null);
           this.pairingRequests.set([]);
         }
       },
@@ -209,19 +297,11 @@ private statusPollTimer: any = null;
     });
   }
 
-  private fetchDashboardUrl(): void {
-    this.http.get<{ url: string }>(`${this.apiBase}/openclaw/dashboard-url`, { headers: this.authHeaders() }).subscribe({
-      next: (res) => this.openclawDashboardUrl.set(res.url),
-      error: () => this.openclawDashboardUrl.set(null),
-    });
-  }
-
-
   startOpenclaw(): void {
     if (this.openclawActionBusy()) return;
     this.openclawActionBusy.set(true);
     this.http.post(`${this.apiBase}/openclaw/start`, {}, { headers: this.authHeaders() }).subscribe({
-      next: () => { setTimeout(() => { this.pollOpenclawStatus(); this.openclawActionBusy.set(false); }, 3000); },
+      next: () => { setTimeout(() => { this.pollOpenclawStatus(); this.openclawActionBusy.set(false); }, 4000); },
       error: () => this.openclawActionBusy.set(false),
     });
   }
@@ -389,10 +469,6 @@ private statusPollTimer: any = null;
         if (mqttUser && mqttUser !== 'not-configured') this.mqttUsername.set(mqttUser);
         const apiUser = s.apiCredentials?.username;
         if (apiUser && apiUser !== 'not-configured') this.apiUsername.set(apiUser);
-        if (s.openclawLlmProvider) this.llmProvider.set(s.openclawLlmProvider);
-        this.llmKeyIsSet.set(!!s.openclawLlmKeySet);
-        if (s.openclawLlmKeySet) this.llmApiKey.set(this.MASKED_KEY);
-        // Skills are loaded live from openclaw in fetchSkills() once status is known
         if (Array.isArray(s.openclawChannels)) {
           this.channels.set(s.openclawChannels.map((c: any) => ({
             name: c.name,
@@ -400,13 +476,19 @@ private statusPollTimer: any = null;
             tokenSet: !!c.tokenSet,
           })));
         }
-        if (Array.isArray(s.openclawModelCache) && s.openclawModelCache.length > 0) {
-          this.allModels.set(s.openclawModelCache);
-          if (s.openclawLlmModel) this.llmModel.set(s.openclawLlmModel);
-        } else {
-          // No cache yet — fetch live from openclaw
-          this.fetchModels(s.openclawLlmModel ?? '');
+        if (s.openclawLlmKeySet) {
+          this.openaiKeySet.set(true); this.openaiKey.set(this.MASKED_KEY);
         }
+        if (s.openclawBaseUrl) {
+          this.openaiBaseUrl.set(s.openclawBaseUrl);
+        }
+      },
+      error: () => {},
+    });
+
+    this.http.get<{ model: string }>(`${this.apiBase}/openclaw/active-model`, { headers: this.authHeaders() }).subscribe({
+      next: (res) => {
+        if (res.model) this.pendingActiveModel.set(res.model);
       },
       error: () => {},
     });
@@ -417,93 +499,41 @@ private statusPollTimer: any = null;
       next: (reqs) => this.pairingRequests.set(reqs),
       error: () => {},
     });
+    this.http.get<{ channel: string; id: string; name: string }[]>(`${this.apiBase}/openclaw/pairing/approved`, { headers: this.authHeaders() }).subscribe({
+      next: (users) => this.approvedUsers.set(users),
+      error: () => {},
+    });
   }
 
-  approvePairing(code: string, channel = 'discord'): void {
+  revokeUser(channel: string, id: string): void {
+    this.revokingUser.set(id);
+    this.http.post(`${this.apiBase}/openclaw/pairing/revoke`, { channel, id }, { headers: this.authHeaders() }).subscribe({
+      next: () => {
+        this.approvedUsers.update(users => users.filter(u => u.id !== id));
+        this.revokingUser.set(null);
+      },
+      error: () => this.revokingUser.set(null),
+    });
+  }
+
+  approvePairing(code: string, channel = 'discord', id?: string): void {
     this.approvingCode.set(code);
     this.http.post(`${this.apiBase}/openclaw/pairing/approve`, { code, channel }, { headers: this.authHeaders() }).subscribe({
       next: () => {
         this.pairingRequests.update(reqs => reqs.filter(r => r.code !== code));
         this.approvingCode.set(null);
+        this.fetchPairingRequests();
       },
       error: () => this.approvingCode.set(null),
     });
   }
 
-  private fetchModels(selectModel = ''): void {
-    this.http.get<string[]>(`${this.apiBase}/openclaw/models`, { headers: this.authHeaders() }).subscribe({
-      next: (models) => {
-        this.allModels.set(models);
-        const toSelect = selectModel || this.llmModel();
-        if (toSelect) this.llmModel.set(toSelect);
-      },
-      error: () => {},
-    });
-  }
-
-  onProviderChange(provider: string): void {
-    this.llmProvider.set(provider as LlmProvider);
-    this.llmModel.set(''); // reset model when provider changes
-  }
+  private fetchModels(): void { /* no-op: models are now hardcoded per provider */ }
 
   // ── OpenClaw ──────────────────────────────────────────────────────────────
 
-  saveOpenClaw(): void {
-    if (this.openclawSaving()) return;
-    const rawKey = this.llmApiKey().trim();
-    const hasKey = this.llmKeyIsSet() || (rawKey && rawKey !== this.MASKED_KEY);
-    if (this.llmProvider() && !hasKey) {
-      this.openclawError.set('An API key is required to configure the LLM provider.');
-      return;
-    }
-    this.openclawSaving.set(true);
-    this.openclawError.set(null);
-    this.openclawSuccess.set(null);
+  saveOpenClaw(): void { /* no-op */ }
 
-    const settingsBody: any = {
-      openclawLlmProvider: this.llmProvider(),
-      openclawLlmModel: this.llmModel(),
-      openclawChannels: this.channels(),
-    };
-
-    // Save to DB first
-    this.http.put(`${this.apiBase}/settings`, settingsBody, { headers: this.authHeaders() }).subscribe({
-      next: () => {
-        const apiKey = rawKey === this.MASKED_KEY ? '' : rawKey;
-        const provider = this.llmProvider();
-        if (provider) {
-          // Always call configure-llm when a provider is set so model changes take effect.
-          // apiKey is optional — if empty, only the model is switched (no restart).
-          this.http.post<{ model: string }>(`${this.apiBase}/openclaw/configure-llm`, {
-            llmProvider: provider,
-            apiKey,
-            model: this.llmModel(),
-          }, { headers: this.authHeaders() }).subscribe({
-            next: (res) => {
-              if (apiKey) this.llmKeyIsSet.set(true);
-              this.llmApiKey.set(this.llmKeyIsSet() ? this.MASKED_KEY : '');
-              this.openclawSaving.set(false);
-              this.openclawSuccess.set(`Saved. Model set to ${res.model}.`);
-              setTimeout(() => this.openclawSuccess.set(null), 4000);
-            },
-            error: (err) => {
-              this.openclawSaving.set(false);
-              this.openclawError.set(err?.error?.error || 'Settings saved but failed to configure OpenClaw.');
-            },
-          });
-        } else {
-          this.llmApiKey.set('');
-          this.openclawSaving.set(false);
-          this.openclawSuccess.set('Saved.');
-          setTimeout(() => this.openclawSuccess.set(null), 2000);
-        }
-      },
-      error: (err) => {
-        this.openclawSaving.set(false);
-        this.openclawError.set(err?.error?.error || 'Failed to save.');
-      },
-    });
-  }
 
   saveChannels(): void {
     if (this.channelsSaving()) return;
@@ -512,11 +542,9 @@ private statusPollTimer: any = null;
     this.channelsSuccess.set(null);
 
     const MASKED = '••••••••••••••••';
-    const calls = this.channels()
-      .filter(c => c.token && c.token !== MASKED)
-      .map(c => ({ name: c.name, obs: this.http.post(`${this.apiBase}/openclaw/configure-channel`, { channel: c.name, token: c.token }, { headers: this.authHeaders() }) }));
+    const newTokens = this.channels().filter(c => c.token && c.token !== MASKED);
 
-    if (calls.length === 0) {
+    if (newTokens.length === 0) {
       this.channelsSaving.set(false);
       this.channelsSuccess.set('Saved.');
       setTimeout(() => this.channelsSuccess.set(null), 2000);
@@ -525,14 +553,16 @@ private statusPollTimer: any = null;
 
     let done = 0;
     let failed = false;
-    for (const { name, obs } of calls) {
-      obs.subscribe({
+    for (const ch of newTokens) {
+      this.http.post(`${this.apiBase}/openclaw/configure-channel`, {
+        channel: ch.name, token: ch.token,
+      }, { headers: this.authHeaders() }).subscribe({
         next: () => {
           done++;
           this.channels.update(list => list.map(c =>
-            c.name === name ? { ...c, token: MASKED, tokenSet: true } : c
+            c.name === ch.name ? { ...c, token: MASKED, tokenSet: true } : c
           ));
-          if (done === calls.length && !failed) {
+          if (done === newTokens.length && !failed) {
             this.channelsSaving.set(false);
             this.channelsSuccess.set('Channel settings saved.');
             setTimeout(() => this.channelsSuccess.set(null), 3000);
@@ -550,16 +580,48 @@ private statusPollTimer: any = null;
   }
 
   private fetchSkills(): void {
-    this.http.get<{ skills: { name: string; description: string; eligible: boolean; enabled: boolean }[] }>(
+    const skills$ = this.http.get<{ id: string; label: string; enabled: boolean }[]>(
       `${this.apiBase}/openclaw/skills`, { headers: this.authHeaders() }
-    ).subscribe({
-      next: (res) => {
-        this.allSkills.set(res.skills.map(s => ({
+    );
+    const jobs$ = this.http.get<{ jobs: { name: string; script: string; cron: string; enabled?: boolean }[] }>(
+      `${this.apiBase}/scheduler/jobs`, { headers: this.authHeaders() }
+    );
+
+    skills$.subscribe({
+      next: (res: any) => {
+        const rawSkills: { name: string; description: string; enabled: boolean }[] = Array.isArray(res) ? res : (res?.skills ?? []);
+        const scheduled = this.allSkills().filter(s => s.kind === 'scheduled');
+        const skillItems = rawSkills.map(s => ({
           id: s.name,
-          label: s.name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-          description: s.description,
-        })));
-        this.enabledSkills.set(new Set(res.skills.filter(s => s.enabled).map(s => s.name)));
+          label: s.name.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+          description: s.description || '',
+          kind: 'skill' as const,
+          builtin: true,
+        }));
+        this.allSkills.set([...skillItems, ...scheduled]);
+        const enabled = new Set(this.enabledSkills());
+        rawSkills.forEach(s => s.enabled ? enabled.add(s.name) : enabled.delete(s.name));
+        this.enabledSkills.set(enabled);
+      },
+      error: () => {},
+    });
+
+    jobs$.subscribe({
+      next: ({ jobs }) => {
+        const existing = this.allSkills().filter(s => s.kind === 'skill');
+        const scheduledItems = (jobs || []).map(j => ({
+          id: `scheduled:${j.name}`,
+          label: j.name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          description: this.describeCron(j.cron),
+          kind: 'scheduled' as const,
+        }));
+        this.allSkills.set([...existing, ...scheduledItems]);
+        const enabled = new Set(this.enabledSkills());
+        (jobs || []).forEach(j => {
+          const id = `scheduled:${j.name}`;
+          j.enabled !== false ? enabled.add(id) : enabled.delete(id);
+        });
+        this.enabledSkills.set(enabled);
       },
       error: () => {},
     });
@@ -582,18 +644,39 @@ private statusPollTimer: any = null;
     this.skillsSaving.set(true);
     this.skillsError.set(null);
     this.skillsSuccess.set(null);
-    const skills = Array.from(this.enabledSkills());
-    this.http.put(`${this.apiBase}/openclaw/skills`, { enabled: skills }, { headers: this.authHeaders() }).subscribe({
-      next: () => {
+
+    const allItems = this.allSkills();
+    const enabled = this.enabledSkills();
+
+    const enabledSkillIds = allItems
+      .filter(s => s.kind === 'skill' && enabled.has(s.id))
+      .map(s => s.id);
+
+    const scheduledChanges = allItems
+      .filter(s => s.kind === 'scheduled')
+      .map(s => ({ name: s.id.replace('scheduled:', ''), enabled: enabled.has(s.id) }));
+
+    let pending = 1 + scheduledChanges.length;
+    let failed = false;
+
+    const done = (err?: string) => {
+      if (err) { failed = true; this.skillsError.set(err); }
+      if (--pending === 0) {
         this.skillsSaving.set(false);
-        this.skillsSuccess.set('Skills saved.');
-        setTimeout(() => this.skillsSuccess.set(null), 2000);
-      },
-      error: (err) => {
-        this.skillsSaving.set(false);
-        this.skillsError.set(err?.error?.error || 'Failed to save skills.');
-      },
-    });
+        if (!failed) {
+          this.skillsSuccess.set('Skills saved.');
+          setTimeout(() => this.skillsSuccess.set(null), 2000);
+        }
+      }
+    };
+
+    this.http.put(`${this.apiBase}/openclaw/skills`, { enabled: enabledSkillIds }, { headers: this.authHeaders() })
+      .subscribe({ next: () => done(), error: (err) => done(err?.error?.error || 'Failed to save skills.') });
+
+    for (const { name, enabled: isEnabled } of scheduledChanges) {
+      this.http.patch(`${this.apiBase}/scheduler/jobs/${name}`, { enabled: isEnabled }, { headers: this.authHeaders() })
+        .subscribe({ next: () => done(), error: (err) => done(err?.error?.error || `Failed to update ${name}.`) });
+    }
   }
 
   // ── API credentials ───────────────────────────────────────────────────────
@@ -602,25 +685,15 @@ private statusPollTimer: any = null;
     if (this.apiSaving() || !this.apiUsername().trim() || !this.apiPassword().trim()) return;
     this.apiSaving.set(true);
     this.apiError.set(null);
-    this.http.put(`${this.apiBase}/settings`, {
-      apiCredentials: { username: this.apiUsername().trim(), password: this.apiPassword() },
+    this.http.post(`${this.apiBase}/openclaw/configure-db-credentials`, {
+      username: this.apiUsername().trim(),
+      password: this.apiPassword(),
     }, { headers: this.authHeaders() }).subscribe({
       next: () => {
-        this.http.post(`${this.apiBase}/openclaw/configure-db-credentials`, {
-          username: this.apiUsername().trim(),
-          password: this.apiPassword(),
-        }, { headers: this.authHeaders() }).subscribe({
-          next: () => {
-            this.apiSaving.set(false);
-            this.apiPassword.set('');
-            this.apiSuccess.set(true);
-            setTimeout(() => this.apiSuccess.set(false), 3000);
-          },
-          error: (err) => {
-            this.apiSaving.set(false);
-            this.apiError.set(err?.error?.error || 'Saved but failed to update OpenClaw container.');
-          },
-        });
+        this.apiSaving.set(false);
+        this.apiPassword.set('');
+        this.apiSuccess.set(true);
+        setTimeout(() => this.apiSuccess.set(false), 3000);
       },
       error: (err) => {
         this.apiSaving.set(false);
@@ -651,13 +724,68 @@ private statusPollTimer: any = null;
     });
   }
 
+  resetMongoPassword(): void {
+    if (this.mongoSaving() || !this.mongoPassword().trim()) return;
+    this.mongoSaving.set(true);
+    this.mongoError.set(null);
+    this.http.post(`${this.apiBase}/settings/reset-mongo-password`, { password: this.mongoPassword() }, { headers: this.authHeaders() }).subscribe({
+      next: () => {
+        this.mongoSaving.set(false);
+        this.mongoPassword.set('');
+        this.mongoSuccess.set(true);
+        setTimeout(() => this.mongoSuccess.set(false), 3000);
+      },
+      error: (err) => {
+        this.mongoSaving.set(false);
+        this.mongoError.set(err?.error?.error || 'Failed to reset password.');
+      },
+    });
+  }
+
   formatDate(iso: string): string {
     if (!iso) return '—';
     return new Date(iso).toLocaleDateString();
   }
 
+  describeCron(cron: string): string {
+    const parts = cron.replace(/#.*$/, '').trim().split(/\s+/);
+    if (parts.length !== 5) return cron;
+    const [min, hour, dom, month, dow] = parts;
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    const fmtTime = (h: string, m: string) => {
+      const hNum = parseInt(h), mNum = parseInt(m);
+      if (isNaN(hNum) || isNaN(mNum)) return `${m}m ${h}h UTC`;
+      const suffix = hNum >= 12 ? 'PM' : 'AM';
+      const h12 = hNum % 12 || 12;
+      return `${h12}:${mNum.toString().padStart(2,'0')} ${suffix} UTC`;
+    };
+
+    if (min === '*' && hour === '*' && dom === '*' && month === '*' && dow === '*') return 'Every minute';
+    if (hour === '*' && dom === '*' && month === '*' && dow === '*') {
+      if (min.startsWith('*/')) return `Every ${min.slice(2)} minutes`;
+    }
+    if (dom === '*' && month === '*' && dow === '*') {
+      if (hour.startsWith('*/')) return `Every ${hour.slice(2)} hours`;
+      return `Daily at ${fmtTime(hour, min)}`;
+    }
+    if (dom === '*' && month === '*' && dow !== '*') {
+      const dayName = days[parseInt(dow)] ?? dow;
+      return `Every ${dayName} at ${fmtTime(hour, min)}`;
+    }
+    if (dow === '*' && month === '*' && dom !== '*') {
+      return `Monthly on day ${dom} at ${fmtTime(hour, min)}`;
+    }
+    return cron;
+  }
+
   editTemplate(id: string): void {
     this.router.navigate(['/edit-template', id]);
+  }
+
+  scrollTo(id: string): void {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   goBack(): void {

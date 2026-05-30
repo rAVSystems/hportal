@@ -22,6 +22,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { IconPickerComponent } from '../../components/icon-picker/icon-picker';
 import { AuthService } from '../../services/auth-service';
 import { NavigationGuardService } from '../../services/navigation-guard.service';
+import { environment } from '../../../environments/environment';
 
 type RoomConfigDoc = {
   _id: string;
@@ -707,7 +708,7 @@ export class EditPage implements OnDestroy {
   
     /** API base (keep simple for now; you can move this to environment.ts later) */
     private apiBase(): string {
-      return (window as any).API_BASE_URL || 'http://localhost:8080';
+      return environment.apiUrl;
     }
   
     private fetchTemplate(): void {

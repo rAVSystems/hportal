@@ -1,6 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export type Role = 'admin' | 'editor' | 'viewer';
 
@@ -21,9 +22,7 @@ export interface AuthResponse {
 export class AuthService {
   private http = inject(HttpClient);
 
-  // Raspberry Pi API base URL
-  //private apiBase = 'http://192.168.1.225:8080';
-  private apiBase = 'http://localhost:8080';
+  private apiBase = environment.apiUrl;
   private readonly tokenKey = 'avportal_token';
   private readonly userKey = 'avportal_user';
 

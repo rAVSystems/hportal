@@ -60,12 +60,15 @@ export class LoginPage {
     this.isLoading.set(true);
 
     this.authService.login(this.username, this.password).subscribe({
-      next: () => {
+      next: (auth) => {
         this.isLoading.set(false);
         this.errorMessage.set('');
 
-        // Default landing after login
-        this.router.navigate(['/monitor'], { replaceUrl: true });
+        if (auth.user.mustChangePassword) {
+          this.router.navigate(['/change-password'], { replaceUrl: true });
+        } else {
+          this.router.navigate(['/monitor'], { replaceUrl: true });
+        }
       },
       error: (err) => {
         this.isLoading.set(false);

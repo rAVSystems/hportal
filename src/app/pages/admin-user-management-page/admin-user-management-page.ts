@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth-service';
+import { environment } from '../../../environments/environment';
 
 export interface AdminUser {
   _id: string;
@@ -33,7 +34,7 @@ interface UserEditState {
   styleUrl: './admin-user-management-page.scss',
 })
 export class AdminUserManagementPage implements OnInit {
-  private readonly apiBase: string = (window as any).API_BASE_URL || 'http://localhost:8080';
+  private readonly apiBase = environment.apiUrl;
 
   users = signal<AdminUser[]>([]);
   editState = new Map<string, UserEditState>();
@@ -180,6 +181,21 @@ export class AdminUserManagementPage implements OnInit {
           state.saving = false;
           this.tick();
         },
+      });
+  }
+
+  deleteUser(userId: string): void {
+    const user = this.users().find((u) => u._id === userId);
+    if (!confirm(`Delete user "${user?.username}"? This cannot be undone.`)) return;
+
+    this.http
+      .delete(`${this.apiBase}/admin/users/${userId}`, { headers: this.authHeaders() })
+      .subscribe({
+        next: () => {
+          this.users.update((list) => list.filter((u) => u._id !== userId));
+          this.editState.delete(userId);
+        },
+        error: () => this.error.set('Failed to delete user.'),
       });
   }
 

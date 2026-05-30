@@ -26,16 +26,13 @@
 }
 
 <div class="user-management-page">
-  <div class="page-section">
-    <div class="section-header">
-      <button mat-icon-button (click)="goBack()"><mat-icon>arrow_back</mat-icon></button>
-      <h2 class="section-title">Template Management</h2>
-      <button mat-stroked-button (click)="loadTemplates()">
-        <mat-icon>refresh</mat-icon>
-        Refresh
-      </button>
-    </div>
+  <div class="content-header">
+    <button mat-icon-button (click)="goBack()"><mat-icon>arrow_back</mat-icon></button>
+    <h2 class="content-title">Template Management</h2>
+    <button mat-stroked-button (click)="loadTemplates()"><mat-icon>refresh</mat-icon> Refresh</button>
+  </div>
 
+  <div class="page-section">
     @if (error()) {
       <div class="error-banner">{{ error() }}</div>
     }
@@ -123,3 +120,4 @@
     </div>
   </div>
 </div>
+

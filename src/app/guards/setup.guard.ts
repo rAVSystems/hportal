@@ -2,8 +2,9 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { map, catchError, of } from 'rxjs';
+import { environment } from '../../environments/environment';
 
-const API_BASE = 'http://localhost:8080';
+const API_BASE = environment.apiUrl;
 
 // Redirects to /setup if setupComplete is false
 export const requireSetupGuard: CanActivateFn = () => {

@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../services/auth-service';
+import { environment } from '../../../environments/environment';
 
 interface TemplateDoc {
   _id: string;
@@ -22,7 +23,7 @@ interface TemplateDoc {
   styleUrl: './new-room-page.scss',
 })
 export class NewRoomPage implements OnInit {
-  private readonly apiBase = (window as any).API_BASE_URL || 'http://localhost:8080';
+  private readonly apiBase = environment.apiUrl;
 
   campus = signal('');
   building = signal('');

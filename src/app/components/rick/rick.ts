@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../services/auth-service';
+import { environment } from '../../../environments/environment';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
@@ -32,7 +33,7 @@ export class Rick {
   ) {}
 
   private apiBase(): string {
-    return (window as any).API_BASE_URL || 'http://localhost:8080';
+    return environment.apiUrl;
   }
 
   send(): void {

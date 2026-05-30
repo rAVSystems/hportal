@@ -10,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
 import { AuthService } from '../../services/auth-service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-change-password-page',
@@ -19,7 +20,7 @@ import { AuthService } from '../../services/auth-service';
   styleUrls: ['./change-password-page.scss'],
 })
 export class ChangePasswordPage {
-  private readonly apiBase = 'http://localhost:8080';
+  private readonly apiBase = environment.apiUrl;
 
   currentPassword = signal('');
   newPassword = signal('');

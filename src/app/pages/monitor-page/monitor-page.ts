@@ -18,6 +18,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../services/auth-service';
 import { RoomCard } from '../../components/room-card/room-card';
 import { MqttService } from '../../services/mqtt.service';
+import { environment } from '../../../environments/environment';
 
 export type RoomDoc = {
   _id: string;
@@ -49,7 +50,7 @@ export type RoomDoc = {
 })
 export class MonitorPage implements OnInit {
   // Keep this consistent with AuthService/api setup
-  private readonly apiBase = 'http://localhost:8080';
+  private readonly apiBase = environment.apiUrl;
 
   rooms = signal<RoomDoc[]>([]);
   isLoading = signal(false);

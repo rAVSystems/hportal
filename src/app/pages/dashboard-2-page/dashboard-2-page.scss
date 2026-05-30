@@ -385,19 +385,9 @@
 .td-type { min-width: 160px; white-space: nowrap; }
 
 .type-badge {
-  font-size: 0.75rem;
-  padding: 5px 12px;
-  border-radius: 999px;
-  font-weight: 600;
-  background: #e0e0e0;
-  color: #555;
+  font-weight: 400;
+  color: #333;
   white-space: nowrap;
-  display: inline-block;
-
-  &.type-classroom  { background: #1565c0; color: #fff; }
-  &.type-conference { background: #6a1b9a; color: #fff; }
-  &.type-lecture    { background: #c62828; color: #fff; }
-  &.type-seminar    { background: #ff8819; color: #fff; }
 }
 
 .loading {

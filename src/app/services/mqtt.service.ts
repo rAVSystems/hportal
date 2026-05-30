@@ -1,5 +1,6 @@
 import { Injectable, OnDestroy, signal } from '@angular/core';
 import mqtt, { MqttClient } from 'mqtt';
+import { environment } from '../../environments/environment';
 
 export interface RoomState {
   roomId: string;
@@ -22,7 +23,7 @@ export class MqttService implements OnDestroy {
   readonly connected = signal(false);
 
   private readonly BROKER_URL = `ws://${window.location.hostname}:9001`;
-  private readonly API_BASE = (window as any).API_BASE_URL || `http://${window.location.hostname}:8080`;
+  private readonly API_BASE = environment.apiUrl;
   private readonly TOPIC = 'av/rooms/+/state';
 
   constructor() {

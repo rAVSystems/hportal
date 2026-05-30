@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth-service';
+import { environment } from '../../../environments/environment';
 
 export interface TemplateDoc {
   _id: string;
@@ -30,7 +31,7 @@ interface TemplateEditState {
   styleUrl: './admin-template-management-page.scss',
 })
 export class AdminTemplateManagementPage implements OnInit {
-  private readonly apiBase: string = (window as any).API_BASE_URL || 'http://localhost:8080';
+  private readonly apiBase = environment.apiUrl;
 
   templates = signal<TemplateDoc[]>([]);
   editState = new Map<string, TemplateEditState>();
